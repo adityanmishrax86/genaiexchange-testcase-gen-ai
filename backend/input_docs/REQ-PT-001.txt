@@ -1,0 +1,1 @@
+REQ-PT-001: The system SHALL record patient body temperature to an accuracy of ±0.1 °C and store the timestamp in UTC.
