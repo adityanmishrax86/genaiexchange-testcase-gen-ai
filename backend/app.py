@@ -14,7 +14,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 # CORS middleware (as we added earlier) - keep that
 from fastapi.middleware.cors import CORSMiddleware
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173","https://storage.googleapis.com",
+        "https://storage.googleapis.com/tcgen-ai-genaiexchange-frontend"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 app.include_router(files_router.router)
 app.include_router(extraction_router.router)
