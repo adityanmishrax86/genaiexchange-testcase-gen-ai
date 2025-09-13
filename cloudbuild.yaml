@@ -15,7 +15,7 @@ steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
       [
-        'run', 'deploy', 'genaiexchange-backend',
+        'gcloud','run', 'deploy', 'genaiexchange-backend',
         '--image', 'gcr.io/$PROJECT_ID/genaiexchange-backend:latest',
         '--region', 'us-central1',
         '--platform', 'managed',
