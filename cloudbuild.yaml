@@ -1,0 +1,52 @@
+steps:
+  # Backend: Build and push Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'backend'
+    args: [
+      'build', '-t', 'gcr.io/$PROJECT_ID/genaiexchange-backend:latest', '.'
+    ]
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push', 'gcr.io/$PROJECT_ID/genaiexchange-backend:latest'
+    ]
+
+  # Backend: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      [
+        'run', 'deploy', 'genaiexchange-backend',
+        '--image', 'gcr.io/$PROJECT_ID/genaiexchange-backend:latest',
+        '--region', 'us-central1',
+        '--platform', 'managed',
+        '--allow-unauthenticated'
+      ]
+
+  # Frontend: Build React app
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    dir: 'frontend'
+    entrypoint: 'bash'
+    args:
+      - -c
+      - |
+        echo "VITE_API_BASE=$(gcloud run services describe genaiexchange-backend --region us-central1 --format 'value(status.url)')" > .env
+
+  - name: 'node:20'
+    dir: 'frontend'
+    entrypoint: 'npm'
+    args: ['install']
+
+  - name: 'node:20'
+    dir: 'frontend'
+    entrypoint: 'npm'
+    args: ['run', 'build']
+
+  # Frontend: Deploy to Cloud Storage
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    dir: 'frontend'
+    args: [
+      'gsutil', '-m', 'rsync', '-r', 'dist', 'gs://$PROJECT_ID-genaiexchange-frontend'
+    ]
+
+timeout: 1200s
