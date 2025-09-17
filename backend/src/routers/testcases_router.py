@@ -39,7 +39,7 @@ def export_testcases_download(upload_session_id: str = Query(None), doc_id: int 
         raise HTTPException(status_code=404, detail="No generated testcases to export")
     fd, tmp_path = tempfile.mkstemp(suffix=".csv")
     with os.fdopen(fd, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=["test_case_id","requirement_id","generated_at","status","evidence","automated_steps","gherkin"])
+        writer = csv.DictWriter(csvfile, fieldnames=["test_case_id","requirement_id","generated_at","status","evidence"])
         writer.writeheader()
         for t in rows:
             evidence = json.loads(t.evidence_json) if t.evidence_json else []
@@ -49,9 +49,8 @@ def export_testcases_download(upload_session_id: str = Query(None), doc_id: int 
                 "requirement_id": t.requirement_id,
                 "generated_at": t.generated_at.isoformat(),
                 "status": t.status,
-                "evidence": "; ".join([str(e) for e in evidence]),
-                "automated_steps": "; ".join([str(s) for s in steps]),
-                "gherkin": t.gherkin or ""
+                "evidence": "; ".join([str(e) for e in evidence])
+                
             })
     sess.close()
     return FileResponse(tmp_path, filename=f"test_cases_{int(datetime.datetime.now().timestamp())}.csv", media_type="text/csv")

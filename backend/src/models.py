@@ -26,6 +26,7 @@ class Requirement(SQLModel, table=True):
     created_at: datetime.datetime = Field(default_factory=now_utc)
     updated_at: datetime.datetime = Field(default_factory=now_utc)
     version: int = 1
+    error_message: Optional[str] = Field(default=None)
 
 class ReviewEvent(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -47,6 +48,10 @@ class TestCase(SQLModel, table=True):
     generated_at: datetime.datetime = Field(default_factory=now_utc)
     status: str = "preview"  # preview | generated | stale | pushed
     jira_issue_key: Optional[str] = None
+    sample_data_json: Optional[str] = Field(default=None)
+    code_scaffold_str: Optional[str] = Field(default=None)
+    test_type: str = Field(default="positive")
+    regeneration_count: int = Field(default=0)
 
 class GenerationEvent(SQLModel, table=True):
     """
@@ -61,3 +66,4 @@ class GenerationEvent(SQLModel, table=True):
     raw_response: Optional[str] = None
     timestamp: datetime.datetime = Field(default_factory=now_utc)
     produced_testcase_ids: Optional[str] = None  # json list string
+    reviewer_confidence: Optional[float] = Field(default=None)
