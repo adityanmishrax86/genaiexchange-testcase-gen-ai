@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from sqlmodel import SQLModel
 from src.db import engine
 from src.models import Document, Requirement, TestCase, ReviewEvent, GenerationEvent
-from src.routers import files_router, extraction_router, generate_router, testcases_router, review_router, requirements_router
+from src.routers import files_router, extraction_router, generate_router, testcases_router, review_router, requirements_router, export_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,3 +23,4 @@ app.include_router(generate_router.router)
 app.include_router(testcases_router.router)
 app.include_router(review_router.router)
 app.include_router(requirements_router.router)
+app.include_router(export_router.router)

@@ -26,6 +26,8 @@ colorama==0.4.6
     # via
     #   click
     #   tqdm
+defusedxml==0.7.1
+    # via jira
 docstring-parser==0.16
     # via google-cloud-aiplatform
 et-xmlfile==2.0.0
@@ -121,10 +123,14 @@ idna==3.10
     #   anyio
     #   httpx
     #   requests
+jira==3.10.5
+    # via -r requirements.in
 numpy==2.2.4
     # via
     #   pandas
     #   shapely
+oauthlib==3.3.1
+    # via requests-oauthlib
 openpyxl==3.1.5
     # via -r requirements.in
 packaging==24.2
@@ -132,6 +138,7 @@ packaging==24.2
     #   google-cloud-aiplatform
     #   google-cloud-bigquery
     #   gunicorn
+    #   jira
 pandas==2.2.3
     # via -r requirements.in
 proto-plus==1.26.1
@@ -184,6 +191,13 @@ requests==2.32.3
     #   google-cloud-bigquery
     #   google-cloud-storage
     #   google-genai
+    #   jira
+    #   requests-oauthlib
+    #   requests-toolbelt
+requests-oauthlib==2.0.0
+    # via jira
+requests-toolbelt==1.0.0
+    # via jira
 rsa==4.9.1
     # via google-auth
 shapely==2.1.1
@@ -211,6 +225,7 @@ typing-extensions==4.13.0
     #   google-genai
     #   google-generativeai
     #   grpcio
+    #   jira
     #   pydantic
     #   pydantic-core
     #   sqlalchemy

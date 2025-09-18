@@ -101,6 +101,37 @@ export default function App(): JSX.Element {
 
   // --- API FUNCTIONS ---
 
+  async function downloadTraceabilityMatrix() {
+    if (!selectedDoc) return setMessage("No document selected.");
+    setLoadingAction("export-matrix");
+    try {
+      const url = `${API_BASE}/export/traceability_matrix?doc_id=${selectedDoc.id}`;
+      const resp = await fetch(url);
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        setMessage(`Export failed: ${resp.status} ${txt}`);
+        return;
+      }
+      // Standard file download logic
+      const blob = await resp.blob();
+      const dlUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = dlUrl;
+      a.download = `traceability_matrix_${selectedDoc.filename}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(dlUrl);
+      setMessage("Traceability Matrix download started.");
+
+    } catch (err: any) {
+      setMessage(String(err));
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
   async function uploadFile(e?: React.FormEvent) {
     e?.preventDefault?.();
     if (!file) {
@@ -114,6 +145,9 @@ export default function App(): JSX.Element {
     try {
       const fd = new FormData();
       fd.append("file", file, file.name);
+      if (sessionId) {
+        fd.append("upload_session_id", sessionId);
+      }
       const res = await fetch(`${API_BASE}/upload`, { method: "POST", body: fd, signal: controller.signal });
       clearTimeout(timeout);
       const text = await res.text();
@@ -419,19 +453,29 @@ export default function App(): JSX.Element {
   }
 
   async function pushToJira() {
-    if (!jiraUrl || !jiraProjectKey || !jiraApiToken) {
+     // For simplicity, hardcoding email. In a real app, this would come from user auth.
+     if (selectedPreviews.size === 0) {
+      return setMessage("Please select at least one test case to push to JIRA.");
+    }
+    const userEmail = "dtmishra43@gmail.com"; 
+
+    if (!jiraUrl || !jiraProjectKey || !jiraApiToken || !userEmail) {
       return setMessage("JIRA configuration is incomplete.");
     }
     setLoadingAction("push-jira");
     setMessage("Pushing selected test cases to JIRA...");
     try {
-      const selectedTestCases = testcases.filter(tc => selectedPreviews.has(tc.id));
       const r = await fetchJson('/export/jira', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          jira_config: { url: jiraUrl, project_key: jiraProjectKey, api_token: jiraApiToken },
-          test_cases: selectedTestCases,
+          jira_config: { 
+            url: jiraUrl, 
+            project_key: jiraProjectKey, 
+            api_token: jiraApiToken,
+            username: userEmail // 👈 Add the user's email here
+          },
+          test_case_ids: Array.from(selectedPreviews),
         })
       });
 
@@ -439,13 +483,14 @@ export default function App(): JSX.Element {
         setMessage(`Successfully pushed ${r.json.created_issues_count} test cases to JIRA.`);
         setIsJiraModalOpen(false);
       } else {
-        setMessage(`JIRA push failed: ${r.status} ${r.text}`);
+        setMessage(`JIRA push failed: ${r.status} ${r.json.detail}`);
       }
     } catch (err: any) {
       setMessage(String(err));
     } finally {
       setLoadingAction(null);
     }
+
   }
 
   // --- UI HELPER FUNCTIONS ---
@@ -658,7 +703,16 @@ export default function App(): JSX.Element {
             >
               {loadingAction === 'regenerate-selected' ? 'Regenerating...' : `Regenerate Selected (${selectedPreviews.size})`}
             </button>
-            <button className="btn" onClick={() => setPreviews([])} disabled={!!loadingAction}>Clear Previews</button>
+            <button 
+                  className="btn" 
+                  onClick={() => { 
+                    setPreviews([]); 
+                    setSelectedPreviews(new Set()); 
+                  }} 
+                  disabled={!!loadingAction}
+                >
+                  Clear Previews
+                </button>
           </div>
           {previews.length > 0 && (
             <>
@@ -757,20 +811,32 @@ export default function App(): JSX.Element {
             <button className="btn primary" onClick={downloadExportCSV} disabled={!!loadingAction} title="Download the generated test cases as a CSV file">
               {loadingAction === 'export-csv' ? '...' : 'Export CSV'}
             </button>
-            <button className="btn" onClick={() => setIsJiraModalOpen(true)} disabled={!!loadingAction} title="Push selected test cases to JIRA">Push to JIRA</button>
+            <button className="btn" onClick={downloadTraceabilityMatrix} disabled={!!loadingAction} title="Download a requirement-to-test-case traceability matrix">
+                  {loadingAction === 'export-matrix' ? '...' : 'Export Traceability Matrix'}
+                </button>
+           <button 
+                  className="btn" 
+                  onClick={() => setIsJiraModalOpen(true)} 
+                  disabled={!!loadingAction || selectedPreviews.size === 0} 
+                  title="Push selected test cases to JIRA"
+                >
+                  {`Push to JIRA (${selectedPreviews.size})`}
+                </button>
           </div>
-          <div className="card">
-            {testcases.length === 0 && <div className="muted" style={{ padding: '20px', textAlign: 'center' }}>No confirmed test cases to display.</div>}
-            {testcases.map((t) => (
-              <div key={t.id} className="req">
-                <div>
-                  <div className="req-id">{t.test_case_id}</div>
-                  <div className="doc-meta">Req: {t.requirement_id} • {new Date(t.generated_at).toLocaleString()}</div>
-                </div>
-                <div style={{ color: "#666" }}>{t.status}</div>
-              </div>
-            ))}
-          </div>
+          <div style={{ marginTop: 12 }}>
+                {testcases.length === 0 && <div className="muted" style={{padding: '20px', textAlign: 'center'}}>No confirmed test cases to display.</div>}
+                {testcases.map((t) => (
+                    <div key={t.id} className="card" style={{marginBottom: '8px', display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div className="req-id">{t.test_case_id}</div>
+                          <div className="doc-meta">Req: {t.requirement_id} • Status: {t.status} • {new Date(t.generated_at).toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <label><input type="checkbox" checked={selectedPreviews.has(t.id)} onChange={() => togglePreview(t.id)} /> Select</label>
+                        </div>
+                    </div>
+                ))}
+            </div>
           <div className="step-navigation">
             <button className="btn" onClick={() => setCurrentStep(3)}>Back to Generation</button>
           </div>
