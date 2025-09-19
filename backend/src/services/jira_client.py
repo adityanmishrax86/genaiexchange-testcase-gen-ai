@@ -34,7 +34,7 @@ h2. Original Requirement
 {requirement['raw_text']}
 {{quote}}
             """,
-            "issuetype": {"name": "Test"},  # Assumes your project has an issue type named "Test"
+            "issuetype": {"name": "Test"},  
         }
 
         # Create the issue
@@ -42,7 +42,6 @@ h2. Original Requirement
         return new_issue.key
 
     except JIRAError as e:
-        # Handle potential errors like incorrect credentials or permissions
         raise RuntimeError(f"JIRA API Error: {e.status_code} - {e.text}")
     except Exception as e:
         raise RuntimeError(f"An unexpected error occurred with JIRA: {e}")

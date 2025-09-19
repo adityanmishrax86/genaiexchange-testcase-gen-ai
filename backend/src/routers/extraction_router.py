@@ -33,7 +33,6 @@ def extract_text_from_file(filepath: str) -> str:
             with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                 text = f.read()
     except Exception as e:
-        # If any parsing fails, raise an error
         raise HTTPException(status_code=500, detail=f"Failed to parse file {os.path.basename(filepath)}: {e}")
     
     return text
@@ -52,13 +51,11 @@ def extract_for_doc(doc_id: int, upload_session_id: str = Query(None)):
         if not os.path.exists(path):
             raise HTTPException(status_code=404, detail="Uploaded file missing on disk")
 
-        # 👇 Change: Use the new helper function to get text from any supported file
         text = extract_text_from_file(path)
         
         if not text.strip():
             raise HTTPException(status_code=400, detail="No text could be extracted from the document.")
 
-        # split into candidate paragraphs (simple heuristic)
         paras = [p.strip() for p in text.split("\n") if p.strip()]
         created = []
 
@@ -69,7 +66,6 @@ def extract_for_doc(doc_id: int, upload_session_id: str = Query(None)):
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Extraction failed for paragraph: {str(e)}")
 
-            # ... (The rest of the function remains exactly the same) ...
             structured = result.get("structured", {}) if isinstance(result, dict) else {}
             error = result.get("error") if isinstance(result, dict) else None
             raw = result.get("raw") if isinstance(result, dict) else None

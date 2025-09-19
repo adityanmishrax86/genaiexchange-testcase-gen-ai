@@ -59,22 +59,18 @@ def update_and_re_extract_requirement(req_id: int, payload: RequirementUpdatePay
     Updates a requirement by archiving the old version and creating a new one.
     """
     with get_session() as sess:
-        # Step 1: Find the old requirement that is being edited
         old_req = sess.get(Requirement, req_id)
         if not old_req:
             raise HTTPException(status_code=404, detail="Requirement not found")
 
-        # Step 2: Archive the old requirement
         old_req.status = "archived"
         sess.add(old_req)
 
-        # Step 3: Mark all associated test cases as "stale"
         stale_tcs = sess.exec(select(TestCase).where(TestCase.requirement_id == req_id)).all()
         for tc in stale_tcs:
             tc.status = "stale"
             sess.add(tc)
         
-        # Step 4: Re-run the AI extraction on the new text from the user
         result = call_vertex_extraction(payload.raw_text)
         
         structured = result.get("structured", {})
@@ -83,11 +79,10 @@ def update_and_re_extract_requirement(req_id: int, payload: RequirementUpdatePay
         status = "needs_manual_fix" if error else "extracted"
         overall_confidence = round(sum(fc_map.values()) / len(fc_map), 2) if fc_map else 0.5
         
-        # Step 5: Create a new requirement record with the updated info
         new_req = Requirement(
             doc_id=old_req.doc_id,
-            requirement_id=old_req.requirement_id, # Keep the same user-facing ID
-            version=old_req.version + 1,          # Increment the version
+            requirement_id=old_req.requirement_id, 
+            version=old_req.version + 1,          
             raw_text=payload.raw_text,
             structured=json.dumps(structured),
             field_confidences=json.dumps(fc_map),
@@ -100,7 +95,6 @@ def update_and_re_extract_requirement(req_id: int, payload: RequirementUpdatePay
         
         sess.add(new_req)
         
-        # Step 6: Commit all changes (archive, stale TCs, new req) and refresh
         sess.commit()
         sess.refresh(new_req)
 

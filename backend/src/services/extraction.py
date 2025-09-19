@@ -8,7 +8,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 # --- Configuration ---
 GENAI_PROJECT = "tcgen-ai"
 GENAI_LOCATION = os.environ.get("GENAI_LOCATION", "global")
-GENAI_MODEL = os.environ.get("GENAI_MODEL", "gemini-2.5-flash-lite") # Consider using a slightly more powerful model for CoT
+GENAI_MODEL = os.environ.get("GENAI_MODEL", "gemini-2.5-flash-lite") 
 _PROMPT_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 logger = logging.getLogger("extraction")
 logger.setLevel(logging.DEBUG)
@@ -70,10 +70,8 @@ def call_vertex_extraction(text: str) -> Dict[str, Any]:
     resp = client.models.generate_content(model=model, contents=[prompt])
     raw = resp.text or ""
 
-    # Robustly find and parse the JSON block from the raw response
     parsed_json = None
     try:
-        # The regex is excellent for finding the JSON block after the reasoning
         m = re.search(r"(\{.*\})", raw, flags=re.S)
         if m:
             parsed_json = json.loads(m.group(1))
@@ -88,5 +86,4 @@ def call_vertex_extraction(text: str) -> Dict[str, Any]:
         return {"structured": validated_data.model_dump(), "raw": raw, "model": model, "error": None}
     except ValidationError as e:
         logger.error("LLM response failed schema validation for text '%s': %s", text[:50], e)
-        # Return the broken data so it can be flagged for manual review
         return {"structured": parsed_json, "raw": raw, "model": model, "error": str(e)}

@@ -15,11 +15,9 @@ UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "./uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def get_user_from_auth(authorization: str = None):
-    # dev-mode simple parsing: token might be "Bearer dev-token" or email
     if not authorization:
         return {"email": "dev-user@example.com"}
     v = authorization.replace("Bearer ", "")
-    # if token looks like an email
     if "@" in v:
         return {"email": v}
     return {"email": "dev-user@example.com"}
@@ -27,9 +25,8 @@ def get_user_from_auth(authorization: str = None):
 @router.post("/api/upload")
 async def upload_file(
     file: UploadFile = File(...), 
-    upload_session_id: Optional[str] = Form(None) # 👈 Accept an optional session_id from the form
+    upload_session_id: Optional[str] = Form(None) 
 ):
-    # For simplicity, we'll use a hardcoded user for this POC
     user = {"email": "dev-user@example.com"}
     
     filename = f"{int(datetime.datetime.now().timestamp())}_{file.filename}"

@@ -22,12 +22,11 @@ type Requirement = {
 };
 
 type Preview = {
-  id: number; // Was preview_id
+  id: number; 
   test_case_id: string;
   gherkin: string;
   code_scaffold_str: string;
   automated_steps_json: string;
-  // Add other fields you might need for other views
 };
 
 type TestCaseRow = {
@@ -94,7 +93,7 @@ export default function App(): JSX.Element {
 
   useEffect(() => {
     if (message) {
-      const timer = setTimeout(() => setMessage(""), 5000); // Auto-close after 5s
+      const timer = setTimeout(() => setMessage(""), 5000); 
       return () => clearTimeout(timer);
     }
   }, [message]);
@@ -350,7 +349,6 @@ export default function App(): JSX.Element {
     setLoadingAction("regenerate-selected");
     try {
       const ids = Array.from(selectedPreviews);
-      // NOTE: This requires the new backend endpoint
       const r = await fetchJson(`/generate/regenerate-batch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -359,7 +357,6 @@ export default function App(): JSX.Element {
 
       if (r.ok) {
         setMessage(`${r.json.regenerated_count} test case(s) regenerated successfully.`);
-        // To see the new results, we re-run the initial generation call
         await generatePreviewForDoc();
       } else {
         setMessage(`Regeneration failed: ${r.status} ${r.text}`);
@@ -383,7 +380,7 @@ export default function App(): JSX.Element {
       if (r.ok) {
         setMessage("Test case updated successfully.");
         setEditingPreview(null);
-        await generatePreviewForDoc(); // Refresh the preview list
+        await generatePreviewForDoc(); 
       } else {
         setMessage(`Save failed: ${r.status} ${r.text}`);
       }
@@ -473,7 +470,7 @@ export default function App(): JSX.Element {
             url: jiraUrl, 
             project_key: jiraProjectKey, 
             api_token: jiraApiToken,
-            username: userEmail // 👈 Add the user's email here
+            username: userEmail 
           },
           test_case_ids: Array.from(selectedPreviews),
         })
@@ -516,10 +513,8 @@ export default function App(): JSX.Element {
     setSelectedTestTypes(newSelection);
   }
 
-  // 👇 NEW: Function to clear the session and start over
   function startNewSession() {
     setSessionId(null);
-    // Note: The useEffect for sessionId will handle removing it from localStorage
     setDocs([]);
     setSelectedDoc(null);
     setRequirements([]);
@@ -537,7 +532,6 @@ export default function App(): JSX.Element {
   async function saveEditedRequirement(reqId: number) {
     setLoadingAction(`save-req-${reqId}`);
     try {
-      // This will call our new backend endpoint
       const r = await fetchJson(`/requirements/${reqId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -546,7 +540,7 @@ export default function App(): JSX.Element {
       if (r.ok) {
         setMessage("Requirement updated and re-analyzed.");
         setEditingReqId(null); // Exit edit mode
-        if (selectedDoc) await loadRequirements(selectedDoc.id); // Refresh the list
+        if (selectedDoc) await loadRequirements(selectedDoc.id); 
       } else {
         setMessage(`Save failed: ${r.status} ${r.text}`);
       }

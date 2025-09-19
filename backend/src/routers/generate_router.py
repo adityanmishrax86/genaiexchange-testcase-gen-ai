@@ -5,7 +5,7 @@ from src.models import Requirement, TestCase, GenerationEvent
 from sqlmodel import select
 import json, time, datetime, os
 from google import genai
-from pydantic import BaseModel # 👈 Add this import
+from pydantic import BaseModel
 from typing import List # 
 
 GENAI_PROJECT = "tcgen-ai"
@@ -108,11 +108,10 @@ def generate_preview(payload: GeneratePreviewPayload):
             sess.commit()
             sess.refresh(tc)
             
-            created_previews.append(tc.model_dump()) # Use the full model data
+            created_previews.append(tc.model_dump())
     
     sess.close()
 
-    # 👇 THE CHANGE IS HERE: Return a list of the full preview objects
     return {"preview_count": len(created_previews), "previews": created_previews}
 
 
@@ -150,8 +149,6 @@ def get_testcase_details(tc_id: int):
         if not tc:
             raise HTTPException(status_code=404, detail="Test case not found")
         
-        # The frontend expects JSON, so we convert the model to a dict.
-        # SQLModel objects can be converted with .model_dump() or .dict()
         return tc.model_dump()
     
 
@@ -162,17 +159,14 @@ def regenerate_single_preview(preview_id: int):
     original requirement, updating the preview in place.
     """
     with get_session() as sess:
-        # Step 1: Find the existing test case (preview) by its ID
         tc_to_regenerate = sess.get(TestCase, preview_id)
         if not tc_to_regenerate:
             raise HTTPException(status_code=404, detail="Test case preview not found")
 
-        # Step 2: Find the original requirement it was based on
         original_req = sess.get(Requirement, tc_to_regenerate.requirement_id)
         if not original_req:
             raise HTTPException(status_code=404, detail="Original requirement not found for this test case")
 
-        # Step 3: Re-run the generation logic using the original structured data and test type
         structured = json.loads(original_req.structured) if original_req.structured else {}
         test_type = tc_to_regenerate.test_type  # Use the original test type
         
@@ -183,7 +177,6 @@ def regenerate_single_preview(preview_id: int):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Re-generation failed: {e}")
         
-        # Step 4: Update the fields of the existing test case object
         parsed = res["parsed"]
         tc_to_regenerate.gherkin = parsed.get("gherkin", "")
         tc_to_regenerate.evidence_json = json.dumps(parsed.get("evidence", []))
@@ -192,12 +185,10 @@ def regenerate_single_preview(preview_id: int):
         tc_to_regenerate.code_scaffold_str = parsed.get("code_scaffold", "")
         tc_to_regenerate.generated_at = datetime.datetime.now(datetime.timezone.utc) # Update the timestamp
 
-        # Step 5: Commit the changes and return the updated object
         sess.add(tc_to_regenerate)
         sess.commit()
         sess.refresh(tc_to_regenerate)
         
-        # The frontend expects a 'previews' list, so we can send back the updated one
         return {
             "message": "Test case regenerated successfully",
             "updated_preview": tc_to_regenerate.model_dump()
@@ -215,14 +206,12 @@ def regenerate_batch_preview(payload: RegenerateBatchPayload):
         for preview_id in payload.preview_ids:
             tc_to_regenerate = sess.get(TestCase, preview_id)
             if not tc_to_regenerate:
-                # You might want to collect errors instead of failing on the first one
                 continue 
 
             original_req = sess.get(Requirement, tc_to_regenerate.requirement_id)
             if not original_req:
                 continue
 
-            # Prevent multiple regenerations (as per our design)
             if tc_to_regenerate.regeneration_count > 0:
                 continue
 
@@ -235,19 +224,16 @@ def regenerate_batch_preview(payload: RegenerateBatchPayload):
                 res = call_vertex_generation(prompt)
                 parsed = res["parsed"]
                 
-                # Update the fields
                 tc_to_regenerate.gherkin = parsed.get("gherkin", "")
                 tc_to_regenerate.evidence_json = json.dumps(parsed.get("evidence", []))
-                # ... update other fields ...
                 tc_to_regenerate.code_scaffold_str = json.dumps(parsed.get("code_scaffold", "")) if isinstance(parsed.get("code_scaffold"), dict) else str(parsed.get("code_scaffold", ""))
                 tc_to_regenerate.generated_at = datetime.datetime.now(datetime.timezone.utc)
-                tc_to_regenerate.regeneration_count += 1 # Increment the count
+                tc_to_regenerate.regeneration_count += 1
 
                 sess.add(tc_to_regenerate)
                 regenerated_count += 1
 
             except Exception as e:
-                # Log the error but continue the loop for other test cases
                 print(f"Failed to regenerate test case {preview_id}: {e}")
                 continue
         

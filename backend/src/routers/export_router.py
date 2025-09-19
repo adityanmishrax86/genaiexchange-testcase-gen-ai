@@ -41,16 +41,13 @@ def push_to_jira(payload: JiraExportPayload):
                 continue
             
             try:
-                # Convert models to dictionaries for the service
                 test_case_dict = test_case.model_dump()
                 requirement_dict = requirement.model_dump()
                 
-                # Use your email for the username in JIRA basic auth
                 jira_config_dict = payload.jira_config.model_dump()
                 
                 new_key = create_jira_issue(jira_config_dict, test_case_dict, requirement_dict)
                 
-                # Optional: Save the JIRA key back to your database for traceability
                 test_case.jira_issue_key = new_key
                 test_case.status = "pushed"
                 sess.add(test_case)
@@ -62,13 +59,12 @@ def push_to_jira(payload: JiraExportPayload):
                 errors.append(f"Failed to create issue for Test Case {test_case.test_case_id}: {e}")
 
     if errors:
-        # Return a partial success if some issues were created but others failed
         if created_issue_keys:
              raise HTTPException(
                 status_code=207, 
                 detail={"message": "Partial success", "created_issues": created_issue_keys, "errors": errors}
             )
-        else: # Fail completely if no issues were created
+        else:
             raise HTTPException(status_code=500, detail={"message": "Failed to create any issues", "errors": errors})
 
     return {"message": "Success", "created_issues_count": len(created_issue_keys), "issue_keys": created_issue_keys}
@@ -79,7 +75,6 @@ def export_traceability_matrix(doc_id: int = Query(...)):
     Generates a CSV Traceability Matrix for a given document.
     """
     with get_session() as sess:
-        # 1. Get all active requirements for the document
         requirements = sess.exec(
             select(Requirement)
             .where(Requirement.doc_id == doc_id)
@@ -89,23 +84,19 @@ def export_traceability_matrix(doc_id: int = Query(...)):
         if not requirements:
             raise HTTPException(status_code=404, detail="No requirements found for this document.")
 
-        # 2. Create a temporary CSV file to write to
         fd, tmp_path = tempfile.mkstemp(suffix=".csv")
         
         with os.fdopen(fd, "w", newline="", encoding="utf-8") as csvfile:
-            # Define the columns for the matrix
             fieldnames = ["Requirement ID", "Requirement Text", "Test Case ID", "Test Case Status"]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
-            # 3. For each requirement, find its linked test cases
             for req in requirements:
                 test_cases = sess.exec(
                     select(TestCase).where(TestCase.requirement_id == req.id)
                 ).all()
 
                 if not test_cases:
-                    # If a requirement has no test cases, list it anyway
                     writer.writerow({
                         "Requirement ID": req.requirement_id or f"REQ-{req.id}",
                         "Requirement Text": req.raw_text,
@@ -113,7 +104,6 @@ def export_traceability_matrix(doc_id: int = Query(...)):
                         "Test Case Status": "N/A",
                     })
                 else:
-                    # If there are test cases, write a row for each one
                     for tc in test_cases:
                         writer.writerow({
                             "Requirement ID": req.requirement_id or f"REQ-{req.id}",
@@ -122,7 +112,6 @@ def export_traceability_matrix(doc_id: int = Query(...)):
                             "Test Case Status": tc.status,
                         })
 
-    # 4. Return the generated file for download
     return FileResponse(
         tmp_path, 
         filename=f"traceability_matrix_{doc_id}_{int(datetime.datetime.now().timestamp())}.csv", 

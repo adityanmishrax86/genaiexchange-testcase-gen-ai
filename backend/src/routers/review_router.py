@@ -38,13 +38,11 @@ def review_requirement(req_id: int, payload: dict = Body(...)):
     req.field_confidences = json.dumps(fc)
     req.overall_confidence = round(sum(fc.values()) / len(fc), 2) if fc else req.overall_confidence
     req.updated_at = datetime.datetime.now(datetime.timezone.utc)
-    # status decision
     req.status = "approved" if review_confidence >= 0.7 else "needs_second_review"
     sess.add(req)
     ev = ReviewEvent(requirement_id=req.id, reviewer=reviewer, action="edit_and_review", note=note, diffs=json.dumps(diffs) if diffs else None, reviewer_confidence=review_confidence, timestamp=datetime.datetime.now(datetime.timezone.utc))
     sess.add(ev)
     sess.commit()
-    # mark related testcases stale
     tcs = sess.exec(select(TestCase).where(TestCase.requirement_id == req.id)).all()
     for t in tcs:
         t.status = "stale"
@@ -64,36 +62,28 @@ def regenerate_requirement(req_id: int, payload: RegeneratePayload):
     """
     sess = get_session()
     try:
-        # 1. Find the requirement
         req = sess.get(Requirement, req_id)
         if not req:
             raise HTTPException(status_code=404, detail="Requirement not found")
 
-        # 2. Modify the prompt to include the new confidence context
-        #    We will create a modified version of the extraction service's prompt
+     
         confidence_text = f"The previous analysis was not accurate. Please re-analyze the text with a critical eye, guided by a new confidence score of {payload.reviewer_confidence} (where 1.0 is high confidence and 0.1 is very low)."
-        
-        # This assumes your `call_vertex_extraction` can be modified or you can
-        # rebuild the prompt here. Let's create a local modified prompt.
+  
         from src.services.extraction import _build_extraction_prompt, call_vertex_extraction
 
-        # Rebuild the prompt with our added context.
-        # NOTE: This is a simplified example. You might want to make the extraction service more flexible.
+        
         modified_prompt = _build_extraction_prompt(req.raw_text) + f"\nAdditional instruction: {confidence_text}"
 
-        # 3. Call the AI extraction service with the modified prompt logic
-        # For simplicity, we'll just call the original function, but a real implementation
-        # might pass the modified prompt.
-        result = call_vertex_extraction(req.raw_text) # In a real scenario, you'd pass the modified prompt
+      
+        result = call_vertex_extraction(req.raw_text) 
         
-        # 4. Update the requirement with the new data
         structured = result.get("structured", {})
         fc_map = structured.get("field_confidences", {})
         
         req.structured = json.dumps(structured)
         req.field_confidences = json.dumps(fc_map)
         req.overall_confidence = round(sum(fc_map.values()) / len(fc_map)) if fc_map else 0.5
-        req.status = "in_review" # Set status back to in_review
+        req.status = "in_review" 
         req.updated_at = datetime.datetime.now(datetime.timezone.utc)
         
         sess.add(req)
