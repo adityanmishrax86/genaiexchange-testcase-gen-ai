@@ -1,0 +1,1133 @@
+Processor Name: projects/26758324191/locations/us/processors/66a48dd22d3e7d65
+The document contains the following text:
+Contains Nonbinding Recommendations
+○ Regression analysis is a documented evaluation of the impact of a software
+change based on review of the relevant documentation (e.g., software
+requirements specification, software design specification, source code, test plans,
+test cases, test scripts, etc.) to determine whether regression testing is needed. If
+regression testing is needed as determined by the regression analysis, the sponsor
+should identify the necessary regression tests to be run. Regression testing is the
+rerunning of test cases that a program has previously executed correctly and
+comparing the current result to the previous result in order to detect unintended
+effects of a software change.
+System level test protocol including expected results derived from software requirements,
+actual results that are observed and recorded, objective pass/fail determination (i.e.,
+actual results are acceptably equivalent to expected results) and a system level test report.
+The system level test report should demonstrate that the protocol has been acceptably
+executed with passing test results and any unresolved anomalies have been acceptably
+deferred based on a risk assessment for the candidate release version.
+(2) Enhanced Documentation Level
+In addition to the documentation requested for the Basic Documentation Level, all unit and
+integration level test protocols and reports should be provided, including expected results derived
+from software requirements and design, actual results that are observed and recorded, and
+objective pass/fail determination (i.e., actual results are acceptably equivalent to expected
+results). The unit and integration level test reports should demonstrate that the protocols have
+been acceptably executed with passing testing results and any unresolved anomalies have been
+acceptably deferred based on a risk assessment for the candidate release version.
+I.
+Software Version History
+The documentation should include the history of software versions that were tested and
+documented at the unit, integration, and system levels as part of verification and validation
+activities, beginning with the version that became subject to the design controls, as described in
+21 CFR 820.30. This typically takes the form of a line-item tabulation including the date, version
+number that was tested (including, if applicable, bench, animal, and clinical testing) and a brief
+description of all changes in the version relative to the previously tested version.
+The last entry in a line-item tabulation should be the final version to be incorporated in the
+released device. This entry should also include any differences between the tested version of
+software and the released version, along with an assessment of the potential effect of the
+differences on the safety and effectiveness of the device.
+If the software version history includes a version(s) that corresponds to a previously released
+cleared or approved version of the software, the sponsor should highlight in the version history
+document each prior released cleared or approved version and the premarket submission
+number(s) associated with that release.
+26
+46
+Contains Nonbinding Recommendations
+If the device is a multiple function device product and includes software function(s) that are
+considered "other functions,” as that term is used in the guidance “Multiple Function Device
+Products: Policy and Considerations," the recommendations described in the aforementioned
+guidance should be considered when preparing the software version history.
+J.
+Unresolved Software Anomalies
+An anomaly is any condition that deviates from the expected behavior based on user needs,
+requirements, specifications, design documents, or standards. Anomalies may be found during
+the review, test, analysis, compilation, or use of the software (whether before or after release, or
+whether inside a sponsor's organization or outside it) or at other times. An unresolved software
+anomaly is a defect that still resides in the software because a sponsor deemed it appropriate not
+to correct or fix the anomaly, according to a risk-based rationale about its impact to the device's
+safety and effectiveness.
+A list of unresolved anomalies should document the following items (e.g., in tabular format) for
+each unresolved anomaly present in the software:
+•
+A description of the anomaly;
+Identification of how the anomaly was discovered and, where possible, identification of
+the root cause(s) of the anomaly;
+•
+Evaluation of the impact of the anomaly on the device's safety and effectiveness,
+including operator usage and human factors considerations;
+• Outcome of the evaluation; and
+•
+Risk-based rationale for not correcting or fixing the anomaly in alignment with the
+sponsor's risk management plan or procedure(s).
+Additionally, the Agency recommends considering the utilization of a defect classification
+system, or taxonomy, for each anomaly, such as ANSI/AAMI SW91's Classification of defects
+in health software. 58 Regardless of the defect classification system used, the sponsor should
+evaluate the impact of an unresolved anomaly on the device's safety and effectiveness based on
+the software's intended use.
+Where appropriate, a sponsor should communicate to end users any mitigations or possible
+work-arounds for unresolved anomalies to assist in the proper operation of the device to fulfill its
+intended use. FDA recommends that any planned or already distributed communication
+58 As stated in ANSI/AAMI SW91, a defect classification system, or taxonomy, is used to classify or categorize the
+types of defects that might exist in software. A defect classification system is neutral with respect to programming
+language, methodology, product, intended use, risk (severity of anomalies), and regulatory status.
+27
+Contains Nonbinding Recommendations
+(customer notification, labeling, etc.) to end users regarding unresolved anomalies is referenced
+in the premarket submission.
+VII. Additional Information - Regulatory Considerations for
+Software Functions
+Section 3060(a) of the Cures Act amended section 520 of the FD&C Act on December 13, 2016,
+removing certain software functions from the definition of device in section 201(h) of the FD&C
+Act. Sponsors should consider the following reference materials to learn more about FDA's
+regulatory considerations for software functions:
+•
+•
+Changes to Existing Medical Software Policies Resulting from Section 3060 of the 21st
+Century Cures Act 59
+General Wellness: Policy for Low Risk Devices 60
+Policy for Device Software Functions and Mobile Medical Applications 61
+Medical Device Data Systems, Medical Image Storage Devices, and Medical Image
+Communications Devices 62
+How to Determine if Your Product is a Medical Device 63
+Clinical Decision Support Software64
+Appendix A: Documentation Level Examples
+The following list of example devices is intended to demonstrate the implementation of the
+Documentation Level risk-based approach. Please note that these generalized examples do not
+necessarily account for every possible detail, risk, or consideration a sponsor should evaluate,
+and should not be taken to mean that the devices described do or do not require a certain
+Documentation Level. These examples do not define the appropriate Documentation Level for a
+particular device type. As such, the Documentation Level should be uniquely considered for each
+particular device or device modification and in consideration of the device's intended use. The
+rationales in the examples below are abbreviated and FDA encourages sponsors to provide a
+detailed assessment that accounts for the specifics of their device (such as the device's risk
+assessment, 65 software description, etc.) when addressing the recommendations in Sections V
+and VI.A of this guidance.
+59 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/changes-existing-
+medical-software-policies-resulting-section-3060-21st-century-cures-act.
+60 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/general-wellness-
+policy-low-risk-devices.
+61 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/policy-device-software-
+functions-and-mobile-medical-applications.
+62 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/medical-device-data-
+systems-medical-image-storage-devices-and-medical-image-communications-devices.
+63 Available at https://www.fda.gov/medical-devices/classify-your-medical-device/how-determine-if-your-product-
+medical-device.
+64 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/clinical-decision-
+support-software.
+65 For more information on risk assessment refer to Section VI.C of this guidance.
+28
+Contains Nonbinding Recommendations
+1. A hardware-only non-patient-matched hip prosthesis.
+Description: The device is a non-patient-matched hip prosthesis that contains no
+firmware or other means for software-based control.
+Rationale: The device does not contain software.
+Outcome: No Documentation Level
+2. A non-contact infrared thermometer intended for intermittent measurement of body
+temperature from the forehead.
+Description: The device is intended to measure body temperature from the
+forehead using an infrared sensor. The device is a hand-held, battery powered,
+reusable device for home and professional healthcare facility use.
+Rationale: In general, a failure or latent flaw of the device software function(s)
+would not present a hazardous situation with a probable risk of death or serious
+injury to either a patient, user of the device, or others in the environment of use,
+prior to the implementation of risk control measures.
+Outcome: Basic Documentation Level
+3. A non-invasive blood pressure monitor with inflatable cuff.
+Description: The device is intended to measure a person's systolic and diastolic
+blood pressure in units of mmHg through software-controlled inflation and
+deflation of the cuff. The device is a battery powered, reusable device for home
+and professional healthcare facility use.
+Rationale: In general, a failure or latent flaw of the device software function(s)
+would not present a hazardous situation with a probable risk of death or serious
+injury to either a patient, user of the device, or others in the environment of use,
+prior to the implementation of risk control measures.
+Outcome: Basic Documentation Level
+4. A device software function for optical camera-based measurement of pulse rate and
+breathing rate.
+Description: The device is intended for non-contact, periodic, spot measurement
+of pulse rate and breathing rate when the subject is at rest. The software analyzes
+compatible video signals of subjects in single occupancy rooms of subjects that do
+not require continuous vital signs monitoring or critical care. The device is
+29
+Contains Nonbinding Recommendations
+intended for use by trained staff and is not intended to be the sole method of
+checking the physical health of a subject.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+5. A computerized behavioral therapy device to treat psychiatric disorders.
+Description: The device is a prescription software device intended to provide a
+computerized version of condition-specific cognitive behavioral therapy as an
+adjunct to clinician supervised outpatient treatment to patients who have been
+previously diagnosed with a psychiatric condition. It is intended to provide
+patients access to therapy tools used during treatment sessions to improve
+recognized treatment outcomes. It is not intended to substitute for routine in-
+person therapy sessions.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+6. A traumatic brain injury (TBI) eye movement assessment aid.
+Description: The device is a prescription device that is intended to track a
+patient's eye movements using a commercial OTS mobile phone and camera and
+analyze the tracked eye movements to aid in the assessment of mild TBI,
+commonly known as “concussion." The device provides a positive or negative
+indicator about the presence of eye movements that are consistent with mild TBI.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures. The device is intended for use as an aid
+in the assessment of mild (non-severe) injury and is not intended as a standalone
+diagnostic.
+Outcome: Basic Documentation Level
+7. An implantable sensor for measuring pulmonary artery (PA) pressure.
+30
+30
+Contains Nonbinding Recommendations
+Description: The device is a system comprising a permanent implant that is
+placed in the PA and an external software-controlled reader that retrieves and
+transmits PA pressure measurements. The PA hemodynamic data are used by the
+physician for heart failure management and with the goal of reducing heart failure
+hospitalizations. There are no device software functions located on the implant.
+Rationale: While the device is a class III device, a failure or latent flaw of the
+device software function(s) would not present a hazardous situation with a
+probable risk of death or serious injury to either a patient, user of the device, or
+others in the environment of use, prior to the implementation of risk control
+measures. Risks of death or serious injury to the patient in this scenario are due to
+the implantable nature of the device and failure of the hardware or implant
+procedure itself, not the device software function(s).
+Outcome: Basic Documentation Level
+8. Over-the-counter (OTC) application for identification of irregular heart rhythms.
+Description: The software application is intended for analysis of
+photoplethysmograh data, identification of episodes of irregular heart rhythms
+suggestive of Atrial Fibrillation (AF), and providing notification to the user of the
+irregular rhythm episodes. It is intended to opportunistically provide a notification
+of possible AF and the absence of a notification is not intended to indicate that no
+disease is present. It is intended for OTC use and it is not intended to replace
+traditional methods of diagnosis or treatment.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+9. An in vitro nucleic acid test for the qualitative detection of Human Papillomavirus (HPV)
+DNA in human cervical specimens.
+Description: The test is intended for routine cervical cancer screening as per
+professional medical guidelines, including triage of ASC-US (atypical squamous
+cells of undetermined significance) cytology, co-testing (or adjunctive screen)
+with cytology, and HPV primary screening of women to assess the risk for
+cervical precancer and cancer. Patients should be followed-up in accordance with
+professional medical guidelines, results from prior screening, medical history, and
+other risk factors.
+31
+Contains Nonbinding Recommendations
+Rationale: While the test is classified as a class III device, a failure or latent flaw
+of the device software function(s) would not present a probable risk of death or
+serious injury to either a patient, user of the device, or others in the environment
+of use prior to the implementation of risk control measures. There are several
+alternatives for the detection of cervical cancer precursors including testing by
+cytology alone, co-testing with HPV alongside or as a follow-up to cytology or
+HPV testing as a first line screening test for cervical cancer. The patient's age,
+medical history, and thorough physical examination will provide further
+information on the risk of cervical disease, as well as the need for referral to
+colposcopy. The test should only be used in conjunction with this clinical
+information in accordance with professional clinical patient management
+guidelines.
+Outcome: Basic Documentation Level
+10. An in vitro nucleic acid test for the qualitative detection and differentiation of influenza
+A virus, influenza B virus, and respiratory syncytial virus (RSV) RNA in nasopharyngeal
+swabs from human patients with signs and symptoms of respiratory tract infection in
+conjunction with clinical and epidemiological risk factors.
+Description: The test is intended for use as an aid in the differential diagnosis of
+influenza A, influenza B, and RSV viral infections in humans. Negative results do
+not preclude influenza virus or RSV infection and should not be used as the sole
+basis for treatment or other patient management decisions.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+11. A device software function on a commercial OTS head-mounted display (e.g., augmented
+reality/virtual reality/mixed reality (AR/VR/MR)) that superimposes pre-surgical images
+on a patient's body.
+Description: The device is intended to provide real-time superimposition of
+medical images on the patient during a surgical procedure, but is neither intended
+to directly guide surgical planning or procedures nor be worn by the lead surgeon.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use prior to the
+implementation of risk control measures, since the device is neither intended to
+directly guide surgical planning or procedures nor be worn by the lead surgeon.
+32
+Contains Nonbinding Recommendations
+Outcome: Basic Documentation Level
+12. A laser system for the treatment of acne vulgaris.
+Description: The device is a laser system used in dermatology offices used to
+treat acne vulgaris through heating of dermal tissue. The device software only
+operates the laser engine. Delivery of therapy requires the operator to depress a
+physical switch on the handpiece.
+Rationale: A failure or latent flaw of the device software functions(s), such as not
+delivering the laser energy when directed, would not present a hazardous situation
+with a probable risk of death or serious injury to the patient prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+13. A radiological display device.
+Description: The device is intended for displaying clinical radiology images for
+review, analysis, and diagnosis by trained medical practitioners. The software
+contained in the device is limited to the following functionalities: display controls,
+ambient light sensing, luminance calibration tools, and quality-control software.
+Rationale: A failure or latent flaw of the device software function(s), such as
+inadequate quality of displayed images, would not present a hazardous situation
+with a probable risk of death or serious injury to either a patient, user of the
+device, or others in the environment of use, prior to the implementation of risk
+control measures.
+Outcome: Basic Documentation Level
+14. An electric breast pump.
+Description: The device is intended to be used by lactating women to express and
+collect milk from their breasts. The device uses a DC-powered motor driving the
+vacuum pump which is controlled electronically to provide a range of user-
+selected suction levels at specified cycle frequencies. The device display provides
+the user with information on the pumping mode, timer, battery level, and suction.
+Rationale: A failure or latent flaw of the device software function(s) (e.g.,
+software fails to properly control the suction level) would not present a hazardous
+situation with a probable risk of death or serious injury to either a patient, user of
+the device, or others in the environment of use prior to the implementation of risk
+control measures.
+Outcome: Basic Documentation Level
+33
+33
+Contains Nonbinding Recommendations
+15. An implantable cardiac pacemaker used to treat bradycardia.
+Description: The device is an implanted, programmable dual-chamber pulse
+generator intended to provide rate-adaptive bradycardia therapy as well as other
+therapeutic and diagnostic functionality. It senses the heart's electrical activity
+and generates electrical impulses to cause the heart to contract or beat according
+to the programmed patient's needs. It communicates with a programmer and the
+patient's home monitoring device.
+Rationale: A failure or latent flaw of the device software function(s), such as
+failure to pace or a latent flaw leading to incorrect sensing of an ectopic beat,
+would lead to a hazardous situation that would present a probable risk of death or
+serious injury to the patient prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+16. A facility use continuous ventilator.
+Description: The device is intended to provide continuous ventilation for adult,
+pediatric, and neonatal patients who require invasive or noninvasive respiratory
+support. It allows clinicians to set ventilator control parameters, set alarm limits,
+and view monitored values and waveforms for patient management. It includes
+respiratory monitoring as well as both mandatory and spontaneous ventilation
+modes. It is intended for use in professional healthcare facilities.
+Rationale: A failure or latent flaw of the device software function(s), such as
+failure to provide appropriately timed ventilation, would present a hazardous
+situation with a probable risk of death or serious injury to a patient, prior to the
+implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+17. A multi-parameter patient monitor for use in a professional healthcare facility.
+Description: The device is a multi-parameter monitor intended for use on adult,
+pediatric, and neonatal patients in a professional healthcare facility. It is used for
+monitoring of various hemodynamic and respiratory vital signs and parameters,
+including central venous oxygen saturation, electrocardiogram (ECG), arrhythmia
+detection, invasive and non-invasive blood pressure, temperature, cardiac output,
+hemoglobin concentration, pulse oximetry, spirometry, airway gases, and gas
+exchange. It is designed to detect alarm conditions and generate alarm signals. It
+can be connected to the hospital network and other monitors to allow for remote
+viewing and management of patients.
+34
+=4
+Contains Nonbinding Recommendations
+Rationale: A failure or latent flaw of the device software function(s), such as
+incorrect calculation of parameters or an exploited cybersecurity vulnerability that
+compromises its ability to provide life-threatening arrhythmia detection and
+alarms, would present a hazardous situation with a probable risk of death or
+serious injury to a patient, prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+18. A Blood Establishment Computer Software (BECS) or BECS accessory.
+Description: The device is used in the manufacture of blood and blood
+components to assist in the prevention of disease in humans by identifying
+ineligible donors, by preventing the release of unsuitable blood and blood
+components for transfusion or for further manufacturing into products for human
+treatment or diagnosis, by performing compatibility testing between donor and
+recipient, or by performing positive identification of patients and blood
+components at the point of transfusion to prevent transfusion reactions. A BECS
+accessory is a device intended for use with BECS to augment the performance of
+the BECS or to expand or modify its indications for use.
+Rationale: A failure or latent flaw of the device software function(s), such as a
+failure to prevent the release of unsuitable blood and blood components, would
+present a hazardous situation with a probable risk of death or serious injury to a
+patient, prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+19. A qualitative in vitro nucleic acid screening test for the direct detection of Babesia DNA
+and RNA in whole blood samples from individual human donors.
+Description: The device is a screening test that includes device software for
+detection of Babesia DNA and RNA in whole blood samples to prevent the
+release of unsuitable blood and blood components.
+Rationale: A failure or latent flaw of the device software function(s), such as an
+inaccurate result in the identification of a transfusion-transmitted infection, would
+present a hazardous situation with a probable risk of death or serious injury to a
+patient, or serious injury, prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+20. An infusion pump intended for use in a health care facility to pump fluids and
+medications into a patient.
+Description: The device is intended for use on adults, pediatrics, and neonates for
+the intermittent or continuous delivery of fluids, medications, blood, and blood
+35
+Contains Nonbinding Recommendations
+products through clinically accepted routes of administration (intravenous, intra-
+arterial, subcutaneous, epidural, and enteral). It is intended for use by trained
+health care professionals in healthcare facilities.
+Rationale: A failure or latent flaw of the device software function(s), such as
+providing the incorrect flow rate or failing to deliver fluids/medications, would
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+21. An in vitro nucleic acid test for the quantitative measurement of Cytomegalovirus (CMV)
+DNA in human plasma or whole blood.
+Description: The test is intended for use as an aid in the management of CMV in
+solid organ transplant patients and in hematopoietic stem cell transplant patients.
+In patients receiving anti-CMV therapy, DNA measurements can be used to
+assess viral response to treatment. The results from the test must be interpreted
+within the context of all relevant clinical and laboratory findings and is not
+intended for use as a screening test for blood or blood products
+Rationale: The test is classified as a class III device. Furthermore, a failure or
+latent flaw of the device software function(s), such as failure to provide correct
+test results, would present a hazardous situation with a probable risk of death or
+serious injury to the patient prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+22. A device software function that provides a sepsis alarm to a healthcare provider in a
+critical care environment.
+Description: Software intended to analyze patient demographics, vital signs, and
+lab results from an electronic medical record to provide asepsis alarm identifying
+patients with sepsis or at risk of developing sepsis earlier than a healthcare
+provider would otherwise. The patient clinical data used as an input for the
+software is part of ongoing or active monitoring of the patient's current health
+state in a critical care environment.
+Rationale: A failure or latent flaw of the device software function(s), such as
+failure to provide a sepsis alarm) would present a hazardous situation with a
+probable risk of death or serious injury to either a patient, user of the device, or
+others in the environment of use prior to the implementation of risk control
+measures.
+Outcome: Enhanced Documentation Level
+36
+36
+Contains Nonbinding Recommendations
+23. A continuous glucose monitoring system.
+Description: The device is intended to provide real time, continuous glucose
+monitoring for the management of diabetes in persons 2 years of age and older. It
+is intended to replace fingerstick blood glucose testing for diabetes treatment
+decisions. It aids in the detection of episodes of hyperglycemia and hypoglycemia
+and facilitates both acute and chronic therapy adjustments.
+Rationale: A failure or latent flaw of the device software function(s), such as
+failure to provide correct blood glucose measurement or detection of
+hypoglycemia, would present a hazardous situation with a probable risk of death
+or serious injury to either a patient, user of the device, or others in the
+environment of use prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+24. Powered Lower Extremity Exoskeleton.
+Description: A powered lower extremity exoskeleton is a prescription device that
+is composed of an external, powered, motorized orthosis that is placed over a
+person's paralyzed or weakened limbs for medical purposes.
+Rationale: A failure or latent flaw of the device software function(s), such as loss
+of remote control or movement signal processing, could present a hazardous
+situation with a probable risk of death or serious injury to the patient prior to the
+implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+25. A retinal diagnostic software device.
+Description: The device is limited to prescription use and incorporates an
+AI/ML-enabled algorithm that is intended to evaluate images for diagnostic
+screening to identify retinal diseases or conditions.
+Rationale: A failure or latent flaw of the device software function(s), such as a
+diagnostic algorithm failure that provides a false result, could present a hazardous
+situation with a probable risk of death or serious injury to the patient prior to the
+implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+26. A radiation therapy treatment system (e.g., Linear accelerator).
+37
+Contains Nonbinding Recommendations
+Description: The device is intended to noninvasively deliver a focal dose of
+radiation to a specified volume of a patient's anatomy while sparing the
+surrounding normal tissues and structures.
+Rationale: A failure or latent flaw of the device software function(s), such as
+under- or overdose to a target volume or delivery to the wrong volume, could
+present a hazardous situation with a probable risk of death or serious injury to the
+patient prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+27. A drug-device combination, with the device constituent part detecting ingestion of the
+drug component to prevent treatment failure.
+"66
+Description: The product is a combination product comprised of two regulated
+components (drug and device). The "primary mode of action"
+is the drug
+component, provided as a tablet. The device constituent part detects ingestion of
+the tablet component to monitor adherence to the drug regimen. A missed dose
+greatly increases the likelihood of treatment failure for a life-threatening
+condition. The device constituent part includes hardware (sensors) and software
+(signal processing).
+Rationale: A failure or latent flaw of the device software function(s), such as a
+false detection of tablet ingestion, would present a hazardous situation with a
+probable risk of death or serious injury to either a patient (through worsening of
+the life-threatening disease), user of the device, or others in the environment of
+use, prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+66 Section 503(g)(1)(C) of the FD&C Act states that the term “primary mode of action” means “the single mode of
+action of a combination product expected to make the greatest contribution to the overall intended therapeutic
+effects of the combination product."
+38
+Contains Nonbinding Recommendations
+Appendix B: System and Software Architecture Diagram
+Examples
+The three example diagrams below are simplified for the purpose of demonstrating how the
+considerations described in Section VI.E (System and Software Architecture Diagram) could be
+implemented into diagrams that facilitate a clear understanding of the system and software. Each
+diagram is supported by descriptive text and a brief discussion on notable features. The examples
+are intended for illustration purposes only and do not describe a complete and comprehensive
+system and software architecture diagram.
+The illustrative diagrams are based on the following distinct example devices:
+1. A hand-held diagnostic device
+2. An implantable therapeutic device with patient- and provider-facing applications
+3. A cloud-based device algorithm for analyzing previously captured medical images
+The diagrams are largely static diagrams with high-level identification of interfaces between
+system and software components. The use of any specific design or formatting features is only
+provided as a suggestion and does not preclude the use of alternative approaches and/or OTS
+modeling languages or platforms.
+39
+Contains Nonbinding Recommendations
+Hardware Module
+Unidirectional Interface
+Bidirectional Interface
+Software Module
+Descriptive Information
+Hand-Held Diagnostic Device
+(SysReq X)
+I Device Software on Microcontroller
+(SWReq X)
+Battery
+(SysReq X.Y)
+Power Management
+(SWReq X.Y)
+Analysis Engine
+(SWReq X.Y)
+See DOC-XX for detailed
+static diagram and analysis i
+engine description
+Note: Analysis engine
+consists of software
+algorithms for analyzing
+signals acquired from
+patient.
+Button 1
+(SysReq X.Y.Z)
+Button 2
+(SysReq X.Y.Z)
+User Interface Event
+Handler
+(SWReq X.Y)
+See DOC-XX for event
+handler state and timing
+diagrams
+System Controller
+(SWReq X.Y)
+See DOC-XX for system
+controller state diagram
+Transmitter
+(SysReq X.Y)
+Receiver
+(SysReq X.Y)
+Dial
+(SysReq X.Y.Z)
+Output Controller
+(SWReq X.Y)
+Liquid-Crystal Display
+(SysReq X.Y)
+SysReq refers to the system requirement(s). Refer to the System Requirements Document (SysRS-XX Rev. X) for detailed information.
+SWReq refers to the software requirement(s). Refer to the Software Requirements Document (SRS-XX Rev. X) for detailed information.
+Figure 1: Example System and Software Architecture Diagram
+Device
+Hand-Held Diagnostic
+Figure 1 depicts a static, high-level system and software architecture diagram of the modules in a
+fictional hand-held diagnostic device. A legend is provided to describe visual features used to
+identify different components. References are provided to documents containing more
+information, including other static diagrams, dynamic diagrams, and detailed descriptions. An
+annotation is provided to improve clarity on the purpose of one module. Text is provided with
+adequate clarity and font size for readability.
+40
+40
+
+Extracted text:
+Contains Nonbinding Recommendations
+○ Regression analysis is a documented evaluation of the impact of a software
+change based on review of the relevant documentation (e.g., software
+requirements specification, software design specification, source code, test plans,
+test cases, test scripts, etc.) to determine whether regression testing is needed. If
+regression testing is needed as determined by the regression analysis, the sponsor
+should identify the necessary regression tests to be run. Regression testing is the
+rerunning of test cases that a program has previously executed correctly and
+comparing the current result to the previous result in order to detect unintended
+effects of a software change.
+System level test protocol including expected results derived from software requirements,
+actual results that are observed and recorded, objective pass/fail determination (i.e.,
+actual results are acceptably equivalent to expected results) and a system level test report.
+The system level test report should demonstrate that the protocol has been acceptably
+executed with passing test results and any unresolved anomalies have been acceptably
+deferred based on a risk assessment for the candidate release version.
+(2) Enhanced Documentation Level
+In addition to the documentation requested for the Basic Documentation Level, all unit and
+integration level test protocols and reports should be provided, including expected results derived
+from software requirements and design, actual results that are observed and recorded, and
+objective pass/fail determination (i.e., actual results are acceptably equivalent to expected
+results). The unit and integration level test reports should demonstrate that the protocols have
+been acceptably executed with passing testing results and any unresolved anomalies have been
+acceptably deferred based on a risk assessment for the candidate release version.
+I.
+Software Version History
+The documentation should include the history of software versions that were tested and
+documented at the unit, integration, and system levels as part of verification and validation
+activities, beginning with the version that became subject to the design controls, as described in
+21 CFR 820.30. This typically takes the form of a line-item tabulation including the date, version
+number that was tested (including, if applicable, bench, animal, and clinical testing) and a brief
+description of all changes in the version relative to the previously tested version.
+The last entry in a line-item tabulation should be the final version to be incorporated in the
+released device. This entry should also include any differences between the tested version of
+software and the released version, along with an assessment of the potential effect of the
+differences on the safety and effectiveness of the device.
+If the software version history includes a version(s) that corresponds to a previously released
+cleared or approved version of the software, the sponsor should highlight in the version history
+document each prior released cleared or approved version and the premarket submission
+number(s) associated with that release.
+26
+46
+Contains Nonbinding Recommendations
+If the device is a multiple function device product and includes software function(s) that are
+considered "other functions,” as that term is used in the guidance “Multiple Function Device
+Products: Policy and Considerations," the recommendations described in the aforementioned
+guidance should be considered when preparing the software version history.
+J.
+Unresolved Software Anomalies
+An anomaly is any condition that deviates from the expected behavior based on user needs,
+requirements, specifications, design documents, or standards. Anomalies may be found during
+the review, test, analysis, compilation, or use of the software (whether before or after release, or
+whether inside a sponsor's organization or outside it) or at other times. An unresolved software
+anomaly is a defect that still resides in the software because a sponsor deemed it appropriate not
+to correct or fix the anomaly, according to a risk-based rationale about its impact to the device's
+safety and effectiveness.
+A list of unresolved anomalies should document the following items (e.g., in tabular format) for
+each unresolved anomaly present in the software:
+•
+A description of the anomaly;
+Identification of how the anomaly was discovered and, where possible, identification of
+the root cause(s) of the anomaly;
+•
+Evaluation of the impact of the anomaly on the device's safety and effectiveness,
+including operator usage and human factors considerations;
+• Outcome of the evaluation; and
+•
+Risk-based rationale for not correcting or fixing the anomaly in alignment with the
+sponsor's risk management plan or procedure(s).
+Additionally, the Agency recommends considering the utilization of a defect classification
+system, or taxonomy, for each anomaly, such as ANSI/AAMI SW91's Classification of defects
+in health software. 58 Regardless of the defect classification system used, the sponsor should
+evaluate the impact of an unresolved anomaly on the device's safety and effectiveness based on
+the software's intended use.
+Where appropriate, a sponsor should communicate to end users any mitigations or possible
+work-arounds for unresolved anomalies to assist in the proper operation of the device to fulfill its
+intended use. FDA recommends that any planned or already distributed communication
+58 As stated in ANSI/AAMI SW91, a defect classification system, or taxonomy, is used to classify or categorize the
+types of defects that might exist in software. A defect classification system is neutral with respect to programming
+language, methodology, product, intended use, risk (severity of anomalies), and regulatory status.
+27
+Contains Nonbinding Recommendations
+(customer notification, labeling, etc.) to end users regarding unresolved anomalies is referenced
+in the premarket submission.
+VII. Additional Information - Regulatory Considerations for
+Software Functions
+Section 3060(a) of the Cures Act amended section 520 of the FD&C Act on December 13, 2016,
+removing certain software functions from the definition of device in section 201(h) of the FD&C
+Act. Sponsors should consider the following reference materials to learn more about FDA's
+regulatory considerations for software functions:
+•
+•
+Changes to Existing Medical Software Policies Resulting from Section 3060 of the 21st
+Century Cures Act 59
+General Wellness: Policy for Low Risk Devices 60
+Policy for Device Software Functions and Mobile Medical Applications 61
+Medical Device Data Systems, Medical Image Storage Devices, and Medical Image
+Communications Devices 62
+How to Determine if Your Product is a Medical Device 63
+Clinical Decision Support Software64
+Appendix A: Documentation Level Examples
+The following list of example devices is intended to demonstrate the implementation of the
+Documentation Level risk-based approach. Please note that these generalized examples do not
+necessarily account for every possible detail, risk, or consideration a sponsor should evaluate,
+and should not be taken to mean that the devices described do or do not require a certain
+Documentation Level. These examples do not define the appropriate Documentation Level for a
+particular device type. As such, the Documentation Level should be uniquely considered for each
+particular device or device modification and in consideration of the device's intended use. The
+rationales in the examples below are abbreviated and FDA encourages sponsors to provide a
+detailed assessment that accounts for the specifics of their device (such as the device's risk
+assessment, 65 software description, etc.) when addressing the recommendations in Sections V
+and VI.A of this guidance.
+59 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/changes-existing-
+medical-software-policies-resulting-section-3060-21st-century-cures-act.
+60 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/general-wellness-
+policy-low-risk-devices.
+61 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/policy-device-software-
+functions-and-mobile-medical-applications.
+62 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/medical-device-data-
+systems-medical-image-storage-devices-and-medical-image-communications-devices.
+63 Available at https://www.fda.gov/medical-devices/classify-your-medical-device/how-determine-if-your-product-
+medical-device.
+64 Available at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/clinical-decision-
+support-software.
+65 For more information on risk assessment refer to Section VI.C of this guidance.
+28
+Contains Nonbinding Recommendations
+1. A hardware-only non-patient-matched hip prosthesis.
+Description: The device is a non-patient-matched hip prosthesis that contains no
+firmware or other means for software-based control.
+Rationale: The device does not contain software.
+Outcome: No Documentation Level
+2. A non-contact infrared thermometer intended for intermittent measurement of body
+temperature from the forehead.
+Description: The device is intended to measure body temperature from the
+forehead using an infrared sensor. The device is a hand-held, battery powered,
+reusable device for home and professional healthcare facility use.
+Rationale: In general, a failure or latent flaw of the device software function(s)
+would not present a hazardous situation with a probable risk of death or serious
+injury to either a patient, user of the device, or others in the environment of use,
+prior to the implementation of risk control measures.
+Outcome: Basic Documentation Level
+3. A non-invasive blood pressure monitor with inflatable cuff.
+Description: The device is intended to measure a person's systolic and diastolic
+blood pressure in units of mmHg through software-controlled inflation and
+deflation of the cuff. The device is a battery powered, reusable device for home
+and professional healthcare facility use.
+Rationale: In general, a failure or latent flaw of the device software function(s)
+would not present a hazardous situation with a probable risk of death or serious
+injury to either a patient, user of the device, or others in the environment of use,
+prior to the implementation of risk control measures.
+Outcome: Basic Documentation Level
+4. A device software function for optical camera-based measurement of pulse rate and
+breathing rate.
+Description: The device is intended for non-contact, periodic, spot measurement
+of pulse rate and breathing rate when the subject is at rest. The software analyzes
+compatible video signals of subjects in single occupancy rooms of subjects that do
+not require continuous vital signs monitoring or critical care. The device is
+29
+Contains Nonbinding Recommendations
+intended for use by trained staff and is not intended to be the sole method of
+checking the physical health of a subject.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+5. A computerized behavioral therapy device to treat psychiatric disorders.
+Description: The device is a prescription software device intended to provide a
+computerized version of condition-specific cognitive behavioral therapy as an
+adjunct to clinician supervised outpatient treatment to patients who have been
+previously diagnosed with a psychiatric condition. It is intended to provide
+patients access to therapy tools used during treatment sessions to improve
+recognized treatment outcomes. It is not intended to substitute for routine in-
+person therapy sessions.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+6. A traumatic brain injury (TBI) eye movement assessment aid.
+Description: The device is a prescription device that is intended to track a
+patient's eye movements using a commercial OTS mobile phone and camera and
+analyze the tracked eye movements to aid in the assessment of mild TBI,
+commonly known as “concussion." The device provides a positive or negative
+indicator about the presence of eye movements that are consistent with mild TBI.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures. The device is intended for use as an aid
+in the assessment of mild (non-severe) injury and is not intended as a standalone
+diagnostic.
+Outcome: Basic Documentation Level
+7. An implantable sensor for measuring pulmonary artery (PA) pressure.
+30
+30
+Contains Nonbinding Recommendations
+Description: The device is a system comprising a permanent implant that is
+placed in the PA and an external software-controlled reader that retrieves and
+transmits PA pressure measurements. The PA hemodynamic data are used by the
+physician for heart failure management and with the goal of reducing heart failure
+hospitalizations. There are no device software functions located on the implant.
+Rationale: While the device is a class III device, a failure or latent flaw of the
+device software function(s) would not present a hazardous situation with a
+probable risk of death or serious injury to either a patient, user of the device, or
+others in the environment of use, prior to the implementation of risk control
+measures. Risks of death or serious injury to the patient in this scenario are due to
+the implantable nature of the device and failure of the hardware or implant
+procedure itself, not the device software function(s).
+Outcome: Basic Documentation Level
+8. Over-the-counter (OTC) application for identification of irregular heart rhythms.
+Description: The software application is intended for analysis of
+photoplethysmograh data, identification of episodes of irregular heart rhythms
+suggestive of Atrial Fibrillation (AF), and providing notification to the user of the
+irregular rhythm episodes. It is intended to opportunistically provide a notification
+of possible AF and the absence of a notification is not intended to indicate that no
+disease is present. It is intended for OTC use and it is not intended to replace
+traditional methods of diagnosis or treatment.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+9. An in vitro nucleic acid test for the qualitative detection of Human Papillomavirus (HPV)
+DNA in human cervical specimens.
+Description: The test is intended for routine cervical cancer screening as per
+professional medical guidelines, including triage of ASC-US (atypical squamous
+cells of undetermined significance) cytology, co-testing (or adjunctive screen)
+with cytology, and HPV primary screening of women to assess the risk for
+cervical precancer and cancer. Patients should be followed-up in accordance with
+professional medical guidelines, results from prior screening, medical history, and
+other risk factors.
+31
+Contains Nonbinding Recommendations
+Rationale: While the test is classified as a class III device, a failure or latent flaw
+of the device software function(s) would not present a probable risk of death or
+serious injury to either a patient, user of the device, or others in the environment
+of use prior to the implementation of risk control measures. There are several
+alternatives for the detection of cervical cancer precursors including testing by
+cytology alone, co-testing with HPV alongside or as a follow-up to cytology or
+HPV testing as a first line screening test for cervical cancer. The patient's age,
+medical history, and thorough physical examination will provide further
+information on the risk of cervical disease, as well as the need for referral to
+colposcopy. The test should only be used in conjunction with this clinical
+information in accordance with professional clinical patient management
+guidelines.
+Outcome: Basic Documentation Level
+10. An in vitro nucleic acid test for the qualitative detection and differentiation of influenza
+A virus, influenza B virus, and respiratory syncytial virus (RSV) RNA in nasopharyngeal
+swabs from human patients with signs and symptoms of respiratory tract infection in
+conjunction with clinical and epidemiological risk factors.
+Description: The test is intended for use as an aid in the differential diagnosis of
+influenza A, influenza B, and RSV viral infections in humans. Negative results do
+not preclude influenza virus or RSV infection and should not be used as the sole
+basis for treatment or other patient management decisions.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+11. A device software function on a commercial OTS head-mounted display (e.g., augmented
+reality/virtual reality/mixed reality (AR/VR/MR)) that superimposes pre-surgical images
+on a patient's body.
+Description: The device is intended to provide real-time superimposition of
+medical images on the patient during a surgical procedure, but is neither intended
+to directly guide surgical planning or procedures nor be worn by the lead surgeon.
+Rationale: A failure or latent flaw of the device software function(s) would not
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use prior to the
+implementation of risk control measures, since the device is neither intended to
+directly guide surgical planning or procedures nor be worn by the lead surgeon.
+32
+Contains Nonbinding Recommendations
+Outcome: Basic Documentation Level
+12. A laser system for the treatment of acne vulgaris.
+Description: The device is a laser system used in dermatology offices used to
+treat acne vulgaris through heating of dermal tissue. The device software only
+operates the laser engine. Delivery of therapy requires the operator to depress a
+physical switch on the handpiece.
+Rationale: A failure or latent flaw of the device software functions(s), such as not
+delivering the laser energy when directed, would not present a hazardous situation
+with a probable risk of death or serious injury to the patient prior to the
+implementation of risk control measures.
+Outcome: Basic Documentation Level
+13. A radiological display device.
+Description: The device is intended for displaying clinical radiology images for
+review, analysis, and diagnosis by trained medical practitioners. The software
+contained in the device is limited to the following functionalities: display controls,
+ambient light sensing, luminance calibration tools, and quality-control software.
+Rationale: A failure or latent flaw of the device software function(s), such as
+inadequate quality of displayed images, would not present a hazardous situation
+with a probable risk of death or serious injury to either a patient, user of the
+device, or others in the environment of use, prior to the implementation of risk
+control measures.
+Outcome: Basic Documentation Level
+14. An electric breast pump.
+Description: The device is intended to be used by lactating women to express and
+collect milk from their breasts. The device uses a DC-powered motor driving the
+vacuum pump which is controlled electronically to provide a range of user-
+selected suction levels at specified cycle frequencies. The device display provides
+the user with information on the pumping mode, timer, battery level, and suction.
+Rationale: A failure or latent flaw of the device software function(s) (e.g.,
+software fails to properly control the suction level) would not present a hazardous
+situation with a probable risk of death or serious injury to either a patient, user of
+the device, or others in the environment of use prior to the implementation of risk
+control measures.
+Outcome: Basic Documentation Level
+33
+33
+Contains Nonbinding Recommendations
+15. An implantable cardiac pacemaker used to treat bradycardia.
+Description: The device is an implanted, programmable dual-chamber pulse
+generator intended to provide rate-adaptive bradycardia therapy as well as other
+therapeutic and diagnostic functionality. It senses the heart's electrical activity
+and generates electrical impulses to cause the heart to contract or beat according
+to the programmed patient's needs. It communicates with a programmer and the
+patient's home monitoring device.
+Rationale: A failure or latent flaw of the device software function(s), such as
+failure to pace or a latent flaw leading to incorrect sensing of an ectopic beat,
+would lead to a hazardous situation that would present a probable risk of death or
+serious injury to the patient prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+16. A facility use continuous ventilator.
+Description: The device is intended to provide continuous ventilation for adult,
+pediatric, and neonatal patients who require invasive or noninvasive respiratory
+support. It allows clinicians to set ventilator control parameters, set alarm limits,
+and view monitored values and waveforms for patient management. It includes
+respiratory monitoring as well as both mandatory and spontaneous ventilation
+modes. It is intended for use in professional healthcare facilities.
+Rationale: A failure or latent flaw of the device software function(s), such as
+failure to provide appropriately timed ventilation, would present a hazardous
+situation with a probable risk of death or serious injury to a patient, prior to the
+implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+17. A multi-parameter patient monitor for use in a professional healthcare facility.
+Description: The device is a multi-parameter monitor intended for use on adult,
+pediatric, and neonatal patients in a professional healthcare facility. It is used for
+monitoring of various hemodynamic and respiratory vital signs and parameters,
+including central venous oxygen saturation, electrocardiogram (ECG), arrhythmia
+detection, invasive and non-invasive blood pressure, temperature, cardiac output,
+hemoglobin concentration, pulse oximetry, spirometry, airway gases, and gas
+exchange. It is designed to detect alarm conditions and generate alarm signals. It
+can be connected to the hospital network and other monitors to allow for remote
+viewing and management of patients.
+34
+=4
+Contains Nonbinding Recommendations
+Rationale: A failure or latent flaw of the device software function(s), such as
+incorrect calculation of parameters or an exploited cybersecurity vulnerability that
+compromises its ability to provide life-threatening arrhythmia detection and
+alarms, would present a hazardous situation with a probable risk of death or
+serious injury to a patient, prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+18. A Blood Establishment Computer Software (BECS) or BECS accessory.
+Description: The device is used in the manufacture of blood and blood
+components to assist in the prevention of disease in humans by identifying
+ineligible donors, by preventing the release of unsuitable blood and blood
+components for transfusion or for further manufacturing into products for human
+treatment or diagnosis, by performing compatibility testing between donor and
+recipient, or by performing positive identification of patients and blood
+components at the point of transfusion to prevent transfusion reactions. A BECS
+accessory is a device intended for use with BECS to augment the performance of
+the BECS or to expand or modify its indications for use.
+Rationale: A failure or latent flaw of the device software function(s), such as a
+failure to prevent the release of unsuitable blood and blood components, would
+present a hazardous situation with a probable risk of death or serious injury to a
+patient, prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+19. A qualitative in vitro nucleic acid screening test for the direct detection of Babesia DNA
+and RNA in whole blood samples from individual human donors.
+Description: The device is a screening test that includes device software for
+detection of Babesia DNA and RNA in whole blood samples to prevent the
+release of unsuitable blood and blood components.
+Rationale: A failure or latent flaw of the device software function(s), such as an
+inaccurate result in the identification of a transfusion-transmitted infection, would
+present a hazardous situation with a probable risk of death or serious injury to a
+patient, or serious injury, prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+20. An infusion pump intended for use in a health care facility to pump fluids and
+medications into a patient.
+Description: The device is intended for use on adults, pediatrics, and neonates for
+the intermittent or continuous delivery of fluids, medications, blood, and blood
+35
+Contains Nonbinding Recommendations
+products through clinically accepted routes of administration (intravenous, intra-
+arterial, subcutaneous, epidural, and enteral). It is intended for use by trained
+health care professionals in healthcare facilities.
+Rationale: A failure or latent flaw of the device software function(s), such as
+providing the incorrect flow rate or failing to deliver fluids/medications, would
+present a hazardous situation with a probable risk of death or serious injury to
+either a patient, user of the device, or others in the environment of use, prior to the
+implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+21. An in vitro nucleic acid test for the quantitative measurement of Cytomegalovirus (CMV)
+DNA in human plasma or whole blood.
+Description: The test is intended for use as an aid in the management of CMV in
+solid organ transplant patients and in hematopoietic stem cell transplant patients.
+In patients receiving anti-CMV therapy, DNA measurements can be used to
+assess viral response to treatment. The results from the test must be interpreted
+within the context of all relevant clinical and laboratory findings and is not
+intended for use as a screening test for blood or blood products
+Rationale: The test is classified as a class III device. Furthermore, a failure or
+latent flaw of the device software function(s), such as failure to provide correct
+test results, would present a hazardous situation with a probable risk of death or
+serious injury to the patient prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+22. A device software function that provides a sepsis alarm to a healthcare provider in a
+critical care environment.
+Description: Software intended to analyze patient demographics, vital signs, and
+lab results from an electronic medical record to provide asepsis alarm identifying
+patients with sepsis or at risk of developing sepsis earlier than a healthcare
+provider would otherwise. The patient clinical data used as an input for the
+software is part of ongoing or active monitoring of the patient's current health
+state in a critical care environment.
+Rationale: A failure or latent flaw of the device software function(s), such as
+failure to provide a sepsis alarm) would present a hazardous situation with a
+probable risk of death or serious injury to either a patient, user of the device, or
+others in the environment of use prior to the implementation of risk control
+measures.
+Outcome: Enhanced Documentation Level
+36
+36
+Contains Nonbinding Recommendations
+23. A continuous glucose monitoring system.
+Description: The device is intended to provide real time, continuous glucose
+monitoring for the management of diabetes in persons 2 years of age and older. It
+is intended to replace fingerstick blood glucose testing for diabetes treatment
+decisions. It aids in the detection of episodes of hyperglycemia and hypoglycemia
+and facilitates both acute and chronic therapy adjustments.
+Rationale: A failure or latent flaw of the device software function(s), such as
+failure to provide correct blood glucose measurement or detection of
+hypoglycemia, would present a hazardous situation with a probable risk of death
+or serious injury to either a patient, user of the device, or others in the
+environment of use prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+24. Powered Lower Extremity Exoskeleton.
+Description: A powered lower extremity exoskeleton is a prescription device that
+is composed of an external, powered, motorized orthosis that is placed over a
+person's paralyzed or weakened limbs for medical purposes.
+Rationale: A failure or latent flaw of the device software function(s), such as loss
+of remote control or movement signal processing, could present a hazardous
+situation with a probable risk of death or serious injury to the patient prior to the
+implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+25. A retinal diagnostic software device.
+Description: The device is limited to prescription use and incorporates an
+AI/ML-enabled algorithm that is intended to evaluate images for diagnostic
+screening to identify retinal diseases or conditions.
+Rationale: A failure or latent flaw of the device software function(s), such as a
+diagnostic algorithm failure that provides a false result, could present a hazardous
+situation with a probable risk of death or serious injury to the patient prior to the
+implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+26. A radiation therapy treatment system (e.g., Linear accelerator).
+37
+Contains Nonbinding Recommendations
+Description: The device is intended to noninvasively deliver a focal dose of
+radiation to a specified volume of a patient's anatomy while sparing the
+surrounding normal tissues and structures.
+Rationale: A failure or latent flaw of the device software function(s), such as
+under- or overdose to a target volume or delivery to the wrong volume, could
+present a hazardous situation with a probable risk of death or serious injury to the
+patient prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+27. A drug-device combination, with the device constituent part detecting ingestion of the
+drug component to prevent treatment failure.
+"66
+Description: The product is a combination product comprised of two regulated
+components (drug and device). The "primary mode of action"
+is the drug
+component, provided as a tablet. The device constituent part detects ingestion of
+the tablet component to monitor adherence to the drug regimen. A missed dose
+greatly increases the likelihood of treatment failure for a life-threatening
+condition. The device constituent part includes hardware (sensors) and software
+(signal processing).
+Rationale: A failure or latent flaw of the device software function(s), such as a
+false detection of tablet ingestion, would present a hazardous situation with a
+probable risk of death or serious injury to either a patient (through worsening of
+the life-threatening disease), user of the device, or others in the environment of
+use, prior to the implementation of risk control measures.
+Outcome: Enhanced Documentation Level
+66 Section 503(g)(1)(C) of the FD&C Act states that the term “primary mode of action” means “the single mode of
+action of a combination product expected to make the greatest contribution to the overall intended therapeutic
+effects of the combination product."
+38
+Contains Nonbinding Recommendations
+Appendix B: System and Software Architecture Diagram
+Examples
+The three example diagrams below are simplified for the purpose of demonstrating how the
+considerations described in Section VI.E (System and Software Architecture Diagram) could be
+implemented into diagrams that facilitate a clear understanding of the system and software. Each
+diagram is supported by descriptive text and a brief discussion on notable features. The examples
+are intended for illustration purposes only and do not describe a complete and comprehensive
+system and software architecture diagram.
+The illustrative diagrams are based on the following distinct example devices:
+1. A hand-held diagnostic device
+2. An implantable therapeutic device with patient- and provider-facing applications
+3. A cloud-based device algorithm for analyzing previously captured medical images
+The diagrams are largely static diagrams with high-level identification of interfaces between
+system and software components. The use of any specific design or formatting features is only
+provided as a suggestion and does not preclude the use of alternative approaches and/or OTS
+modeling languages or platforms.
+39
+Contains Nonbinding Recommendations
+Hardware Module
+Unidirectional Interface
+Bidirectional Interface
+Software Module
+Descriptive Information
+Hand-Held Diagnostic Device
+(SysReq X)
+I Device Software on Microcontroller
+(SWReq X)
+Battery
+(SysReq X.Y)
+Power Management
+(SWReq X.Y)
+Analysis Engine
+(SWReq X.Y)
+See DOC-XX for detailed
+static diagram and analysis i
+engine description
+Note: Analysis engine
+consists of software
+algorithms for analyzing
+signals acquired from
+patient.
+Button 1
+(SysReq X.Y.Z)
+Button 2
+(SysReq X.Y.Z)
+User Interface Event
+Handler
+(SWReq X.Y)
+See DOC-XX for event
+handler state and timing
+diagrams
+System Controller
+(SWReq X.Y)
+See DOC-XX for system
+controller state diagram
+Transmitter
+(SysReq X.Y)
+Receiver
+(SysReq X.Y)
+Dial
+(SysReq X.Y.Z)
+Output Controller
+(SWReq X.Y)
+Liquid-Crystal Display
+(SysReq X.Y)
+SysReq refers to the system requirement(s). Refer to the System Requirements Document (SysRS-XX Rev. X) for detailed information.
+SWReq refers to the software requirement(s). Refer to the Software Requirements Document (SRS-XX Rev. X) for detailed information.
+Figure 1: Example System and Software Architecture Diagram
+Device
+Hand-Held Diagnostic
+Figure 1 depicts a static, high-level system and software architecture diagram of the modules in a
+fictional hand-held diagnostic device. A legend is provided to describe visual features used to
+identify different components. References are provided to documents containing more
+information, including other static diagrams, dynamic diagrams, and detailed descriptions. An
+annotation is provided to improve clarity on the purpose of one module. Text is provided with
+adequate clarity and font size for readability.
+40
+40
+
