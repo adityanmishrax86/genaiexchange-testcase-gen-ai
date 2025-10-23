@@ -1,0 +1,68 @@
+You will be given:
+1. user_question: an original requirement sentence (the ground truth of what must be tested),
+2. system_answer: a JSON object produced by an evaluator LLM (intended to parse that requirement into a structured schema).
+
+Your job: rate how well the system_answer captures the requirement in a way that is compliant and testable for IEC 62304 and FDA 21 CFR 820.30.
+---
+SCALE (pick exactly one integer 1–4):
+1 = Terrible: irrelevant, wrong, or fatally incomplete.
+2 = Mostly not helpful: misses key elements or misinterprets operator/units/latency/traceability.
+3 = Mostly helpful: generally correct with minor gaps (e.g., missing one field or a citation detail).
+4 = Excellent: precise, complete, testable, cites relevant sections, and preserves comparator semantics, units, and timing.
+
+RUBRIC (score each 0–1; use them to justify your single 1–4 rating):
+- Correctness_of_Trigger: metric, operator, threshold(s), and units match the requirement. Correct handling of “exceeds/≥/≤/outside range”.
+- Timing_and_Latency: captures explicit timing (e.g., 2 seconds) in milliseconds; absent only if requirement has none.
+- Actions_and_Priority: actions reflect the requirement (alert/log/block/etc.) with sensible parameters (e.g., audible/visual).
+- Logging_and_Traceability: indicates audit/log requirement and fields (UTC time, input value, threshold, user id) when the requirement mentions “log/audit”.
+- Standards_Citations: includes appropriate IEC 62304 §5.7 for verification and FDA 820.30(f)/(g); adds ISO 14971 and IEC 62366-1 if safety/alarms apply.
+- Boundary_Readiness: provides boundary_values (x-1, x, x+1 or range endpoints) and verification methods (Functional/Boundary/Negative/Fault Injection as applicable).
+- Consistency_and_No_Hallucination: no invented numbers; nulls used when the requirement does not state a value.
+- Confidence_and_Warnings: includes reasonable confidence scores and warnings for omissions/ambiguities.
+
+OUTPUT FORMAT (STRICT):
+Return feedback as plain text using EXACTLY the following keys:
+Feedback:::
+Evaluation: <short rationale, referencing rubric points concisely>
+Total rating: <1|2|3|4>
+
+INSTRUCTIONS:
+- Read user_question carefully and compare with system_answer fields.
+- Penalize if operator semantics are wrong (e.g., “exceeds 180” must NOT alert at 180).
+- Penalize if units are missing or mismatched.
+- If requirement specifies logging/audit, require audit fields.
+- If requirement specifies timing, require timing in ms and in the appropriate field.
+- If safety/alarms involved, expect IEC 62304 §5.7 + FDA 820.30(f,g); optionally ISO 14971 and IEC 62366-1.
+- Prefer null for unspecified elements over hallucinated values.
+- After reasoning, produce the final 1–4 rating.
+---
+
+You are a judge. Return STRICT JSON matching this schema:
+
+"""
+
+{
+  "feedback": "string (one-line overview)",
+  "evaluation": "string (brief rationale referencing rubric points)",
+  "total_rating": 1-4 integer,
+  "subscores": {
+    "Correctness_of_Trigger": 0-1,
+    "Timing_and_Latency": 0-1,
+    "Actions_and_Priority": 0-1,
+    "Logging_and_Traceability": 0-1,
+    "Standards_Citations": 0-1,
+    "Boundary_Readiness": 0-1,
+    "Consistency_and_No_Hallucination": 0-1,
+    "Confidence_and_Warnings": 0-1
+  }
+}
+
+Rate how well system_answer addresses user_question for IEC 62304/FDA 820.30.
+
+Return ONLY JSON. No extra text.
+
+Question: {{QUESTION}}
+Answer: {{ANSWER}}
+
+"""
+

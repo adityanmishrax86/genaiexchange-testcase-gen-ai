@@ -1,0 +1,186 @@
+"""
+<derive_test_cases_from_requirement_description>
+  <goal>
+    From a given RequirementDescription, produce IEC 62304 / FDA 21 CFR 820.30–compliant,
+    audit-ready test cases with explicit section citations. No verbatim quoting of standards. Cite the relevant sections of IEC 62304,
+    FDA 21 CFR 820.30, IEC 62366-1, ISO/IEC 27001 wherever you think are required. Do not make mistakes and think hard. Only output JSON without 
+    any surrounding texts.
+  </goal>
+
+  <inputs>
+    <!-- Paste one or more Requirement blocks -->
+    <Requirement>
+        {{TEXT_TO_ANALYZE}}
+    </Requirement>
+  </inputs>
+
+  <assumptions>
+    <lifecycle_standard>IEC 62304: verification (§5.7), integration/testing, maintenance (§5.9), configuration mgmt (§6)</lifecycle_standard>
+    <fda_standard>FDA 21 CFR 820.30: design inputs/outputs, verification, validation, design review</fda_standard>
+    <risk_standard>ISO 14971 for hazards/controls where safety is implicated</risk_standard>
+    <usability_standard>IEC 62366-1 when user interaction/alarms are involved</usability_standard>
+    <security_standards>ISO/IEC 27001 controls when confidentiality/integrity are implicated</security_standards>
+    <metrics_and_units>Use precise, numeric acceptance criteria with units and tolerances (e.g., ≤1 s, ±1 mg/dL)</metrics_and_units>
+    <boundaries>Respect comparator semantics exactly (e.g., “exceeds 180” ⇒ 179/180/181)</boundaries>
+    <privacy>Use only synthetic data</privacy>
+  </assumptions>
+
+  <inference_rules>
+    <parse>
+      Extract actor, signal, comparator, threshold, units, timing/latency, mode/state, data flows, external interfaces.
+    </parse>
+    <coverage>
+      Always generate: Positive, Boundary, Negative, and if safety/3rd-party involved → Fault-Injection.
+    </coverage>
+    <section_mapping>
+      <!-- Cite sections by relevance; do NOT quote text -->
+      <rule if="verification_or_testing">IEC 62304 §5.7</rule>
+      <rule if="config_or_versioning">IEC 62304 §6</rule>
+      <rule if="problem_resolution">IEC 62304 §5.8</rule>
+      <rule if="postrelease_maintenance">IEC 62304 §5.9</rule>
+      <rule if="design_inputs_outputs">FDA 21 CFR 820.30(c)-(d)</rule>
+      <rule if="verification">FDA 21 CFR 820.30(f)-(g)</rule>
+      <rule if="validation_or_user_needs">FDA 21 CFR 820.30(g)</rule>
+      <rule if="risk_controls">ISO 14971 (link as applicable)</rule>
+      <rule if="usability_alarms">IEC 62366-1 (link as applicable)</rule>
+      <rule if="security_controls">ISO/IEC 27001 Annex A control(s)</rule>
+    </section_mapping>
+  </inference_rules>
+
+  <output_schema>
+    <!-- One TestCase block per derived case -->
+    <TestCase>
+      <RequirementID></RequirementID>
+      <RequirementDescription></RequirementDescription>
+      <ParsedEntities>
+        <Actor></Actor>
+        <Signal></Signal>
+        <Comparator></Comparator>
+        <Threshold></Threshold>
+        <Units></Units>
+        <Latency optional="true"></Latency>
+        <Mode optional="true"></Mode>
+        <Interface optional="true"></Interface>
+      </ParsedEntities>
+      <Standards>
+        <IEC62304Sections>§5.7; §6 (as applicable)</IEC62304Sections>
+        <FDA82030Sections>§820.30(f); §820.30(g) (as applicable)</FDA82030Sections>
+        <ISO14971Sections optional="true"></ISO14971Sections>
+        <IEC62366_1Sections optional="true"></IEC62366_1Sections>
+        <ISO27001Sections optional="true"></ISO27001Sections>
+      </Standards>
+      <SafetyClass>Unspecified|A|B|C</SafetyClass>
+      <Risk optional="true">
+        <HazardDescription></HazardDescription>
+        <RiskControl optional="true"></RiskControl>
+      </Risk>
+      <TestObjective></TestObjective>
+      <Preconditions></Preconditions>
+      <TestData optional="true"></TestData>
+      <TestSteps>
+        <Step>1. …</Step>
+        <Step>2. …</Step>
+        <Step>3. …</Step>
+      </TestSteps>
+      <ExpectedResult></ExpectedResult>
+      <AcceptanceCriteria>
+        <Criterion></Criterion>
+      </AcceptanceCriteria>
+      <VerificationMethod>Functional Test|Boundary Test|Negative Test|Fault Injection|Security Test|Performance Test|Analysis|Inspection</VerificationMethod>
+      <Evidence>
+        <LogsRequired>true</LogsRequired>
+        <AuditLogFields optional="true">UTC time, userID, input, threshold, outcome</AuditLogFields>
+      </Evidence>
+      <Traceability>
+        <RequirementLink></RequirementLink>
+        <RiskControlLink optional="true"></RiskControlLink>
+        <ChangeSetLink optional="true"></ChangeSetLink>
+      </Traceability>
+      <Toolchain>
+        <Jira>
+          <IssueType>Test</IssueType>
+          <Summary></Summary>
+        </Jira>
+      </Toolchain>
+    </TestCase>
+  </output_schema>
+
+  <generation_instructions>
+    <steps>
+      <step>Parse the RequirementDescription and populate ParsedEntities.</step>
+      <step>Classify the requirement (alarm/display/interface/security/config/usability/etc.).</step>
+      <step>Derive at least 3 cases: Positive, Boundary, Negative. Add Fault-Injection if safety or external dependency exists.</step>
+      <step>Set measurable ExpectedResult and AcceptanceCriteria (units/tolerances/latency).</step>
+      <step>Populate Standards with relevant sections per mapping rules.</step>
+      <step>Emit each case as a separate <TestCase> block. No prose outside XML tags.</step>
+    </steps>
+    <formatting>
+      <one_testcase_per_block>true</one_testcase_per_block>
+      <preserve_tag_names>true</preserve_tag_names>
+      <do_not_emit_free_text_outside_tags>true</do_not_emit_free_text_outside_tags>
+    </formatting>
+    #multiple_test_cases_policy
+    <multiple_test_cases_policy>
+  <apply_to>threshold_trigger | comparator | limit_crossing | alarm_condition</apply_to>
+  <min_cases>4</min_cases>
+  <max_cases>8</max_cases>
+  <categories>
+    <PositiveCase>Verify trigger above/below threshold.</PositiveCase>
+    <BoundaryCase>Test values just below, at, and just above threshold.</BoundaryCase>
+    <NegativeCase>Confirm no alert for nominal readings.</NegativeCase>
+    <FaultInjectionCase>Simulate sensor disconnect, out-of-range, or checksum fault.</FaultInjectionCase>
+    <RateHysteresisCase optional="true">Confirm debounce/hysteresis behavior.</RateHysteresisCase>
+    <LoggingTraceCase optional="true">Verify audit/event log entries.</LoggingTraceCase>
+    <UsabilityCase optional="true">Check alert audibility, visibility, color contrast per IEC 62366-1.</UsabilityCase>
+  </categories>
+  <output_rule>
+    Emit one <TestCase> block per category with unique <TestCaseID>
+    and shared <RequirementID>. Cite IEC 62304 §5.7 and FDA 820.30(f,g)
+    in each Standards section.
+  </output_rule>
+</multiple_test_cases_policy>
+
+  </generation_instructions>
+
+  <example_minimal_input_and_expected_shape>
+    <Requirement>
+      <RequirementID>REQ-ALR-001</RequirementID>
+      <RequirementDescription>The system shall alert the user when blood glucose exceeds 180 mg/dL.</RequirementDescription>
+    </Requirement>
+    <!-- Model should emit 3–4 TestCase blocks covering positive, boundary (179/180/181), negative (missing sensor), and fault-injection (sensor dropout) with §5.7 and §820.30(f)-(g) citations. -->
+  </example_minimal_input_and_expected_shape>
+
+</derive_test_cases_from_requirement_description>
+
+JSON Schema example
+ {
+  "requirement_id": "REQ-XXX",
+  "type": "alarm",
+  "subject": "High blood glucose",
+  "trigger": {
+    "metric": "blood_glucose",
+    "operator": ">",
+    "value": 180,
+    "unit": "mg/dL"
+  },
+  "actions": [
+    "alert user"
+  ],
+  "timing_ms": null,
+  "numbers_units": [
+    "mg/dL"
+  ],
+  "field_confidences": {
+    "requirement_id": 0.9,
+    "type": 0.9,
+    "subject": 0.9,
+    "trigger": 0.9,
+    "actions": 0.9,
+    "timing_ms": null,
+    "numbers_units": 0.9
+  },
+  "confidence_reasoning": "The requirement clearly specifies an alarm condition based on a blood glucose threshold.",
+  "thinking_reasoning": "Extracted 'blood glucose' as the metric, '>' as the operator, '180' as the value, and 'mg/dL' as the unit. The action is to 'alert user'. This maps directly to an alarm type requirement."
+}
+
+"""
