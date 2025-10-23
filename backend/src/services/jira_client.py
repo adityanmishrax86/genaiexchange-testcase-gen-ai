@@ -201,7 +201,7 @@ def _build_issue_description(tc: Dict[str, Any]) -> str:
         f"{trace}\n"
     )
 
-
+#TODO Implement BULK upload service instead of looping through cases.
 def create_jira_issues_from_testcases(
     jira_config: Dict[str, Any],
     payload: Dict[str, Any],
