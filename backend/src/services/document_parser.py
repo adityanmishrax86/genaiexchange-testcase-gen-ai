@@ -7,9 +7,6 @@ from src.utils.pdf_parser import parse_pdf
 
 load_dotenv()
 
-
-
-
 def extract_text_from_file(filepath: str) -> str:
     """
     Reads a file and extracts its text content based on its extension.
