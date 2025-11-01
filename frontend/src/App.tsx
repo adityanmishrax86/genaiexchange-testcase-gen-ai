@@ -894,7 +894,7 @@
 //   );
 // }
 
-import React, { useState, useCallback, useRef, useMemo  } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect  } from 'react';
 import {
  MiniMap,
   Controls,
@@ -912,6 +912,13 @@ import {
   ReactFlow
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import {
+  DEFAULT_WORKFLOW_NODES,
+  DEFAULT_WORKFLOW_EDGES,
+  WorkflowConfig,
+  initializeWorkflow,
+} from './config/workflowConfig';
+import WorkflowSettings from './components/WorkflowSettings';
 
 
 // Custom Node Components
@@ -1471,8 +1478,18 @@ const Sidebar = () => {
 
 // Main Component
 function HealthcareTestGenerator() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // Workflow configuration for optional features
+  const [workflowConfig, setWorkflowConfig] = useState<WorkflowConfig>({
+    includeStandards: true,
+    includeJudge: true,
+  });
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Initialize nodes and edges with default workflow
+  const initialWorkflow = initializeWorkflow(workflowConfig);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialWorkflow.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialWorkflow.edges);
+
   const [workflowStatus, setWorkflowStatus] = useState('idle');
   const [currentStep, setCurrentStep] = useState(null);
   const [metrics, setMetrics] = useState({
@@ -1484,6 +1501,13 @@ function HealthcareTestGenerator() {
   });
   const reactFlowWrapper = useRef(null);
   const { screenToFlowPosition  } = useReactFlow();
+
+  // Update workflow when config changes
+  useEffect(() => {
+    const newWorkflow = initializeWorkflow(workflowConfig);
+    setNodes(newWorkflow.nodes);
+    setEdges(newWorkflow.edges);
+  }, [workflowConfig, setNodes, setEdges]);
 
   const onConnect = useCallback((params) => {
     setEdges((eds) => addEdge({
@@ -1602,10 +1626,12 @@ function HealthcareTestGenerator() {
   };
 
   const resetWorkflow = () => {
+    // Reinitialize workflow with current config
+    const newWorkflow = initializeWorkflow(workflowConfig);
+    setNodes(newWorkflow.nodes);
+    setEdges(newWorkflow.edges);
     setWorkflowStatus('idle');
     setCurrentStep(null);
-    setNodes([]);
-    setEdges([]);
     setMetrics({
       requirements: 0,
       testCases: 0,
@@ -1635,6 +1661,15 @@ function HealthcareTestGenerator() {
                 {workflowStatus.toUpperCase()}
               </span>
             </div>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all transform hover:scale-110"
+              title="Workflow Settings"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              </svg>
+            </button>
             <button
               onClick={runWorkflow}
               disabled={workflowStatus === 'running'}
@@ -1718,8 +1753,8 @@ function HealthcareTestGenerator() {
             {nodes.length === 0 && (
               <Panel position="top-center" className="bg-blue-100 p-4 rounded-lg mt-4">
                 <div className="text-center">
-                  <p className="text-lg font-semibold text-blue-900">Start Building Your Workflow</p>
-                  <p className="text-sm text-blue-700 mt-1">Drag nodes from the left sidebar to begin</p>
+                  <p className="text-lg font-semibold text-blue-900">Workflow Ready</p>
+                  <p className="text-sm text-blue-700 mt-1">Click the ⚙️ settings button to configure optional features</p>
                 </div>
               </Panel>
             )}
@@ -1757,6 +1792,15 @@ function HealthcareTestGenerator() {
           </div>
         </div>
       </div>
+
+      {/* Workflow Settings Modal */}
+      {showSettings && (
+        <WorkflowSettings
+          config={workflowConfig}
+          onConfigChange={setWorkflowConfig}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   );
 }
