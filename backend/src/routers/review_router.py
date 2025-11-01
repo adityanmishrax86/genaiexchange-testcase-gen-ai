@@ -3,15 +3,10 @@ from fastapi import APIRouter, Body, HTTPException
 from src.db import get_session
 from src.models import Requirement, ReviewEvent, TestCase
 from sqlmodel import select
-import json, datetime
-from pydantic import BaseModel
-from src.services.extraction import call_vertex_extraction 
+import json
+import datetime
 
 router = APIRouter()
-
-
-class RegeneratePayload(BaseModel):
-    reviewer_confidence: float
 
 @router.post("/api/review/{req_id}")
 def review_requirement(req_id: int, payload: dict = Body(...)):
@@ -52,45 +47,3 @@ def review_requirement(req_id: int, payload: dict = Body(...)):
     out = {"req_id": int(req.id), "status": req.status, "diffs": diffs, "field_confidences": json.loads(req.field_confidences) if req.field_confidences else {}}
     sess.close()
     return out
-
-
-@router.post("/api/requirements/regenerate/{req_id}")
-def regenerate_requirement(req_id: int, payload: RegeneratePayload):
-    """
-    Re-runs the AI extraction on a requirement's raw text,
-    using a new confidence score to guide the model.
-    """
-    sess = get_session()
-    try:
-        req = sess.get(Requirement, req_id)
-        if not req:
-            raise HTTPException(status_code=404, detail="Requirement not found")
-
-     
-        confidence_text = f"The previous analysis was not accurate. Please re-analyze the text with a critical eye, guided by a new confidence score of {payload.reviewer_confidence} (where 1.0 is high confidence and 0.1 is very low)."
-  
-        from src.services.extraction import _build_extraction_prompt, call_vertex_extraction
-
-        
-        modified_prompt = _build_extraction_prompt(req.raw_text) + f"\nAdditional instruction: {confidence_text}"
-
-      
-        result = call_vertex_extraction(req.raw_text) 
-        
-        structured = result.get("structured", {})
-        fc_map = structured.get("field_confidences", {})
-        
-        req.structured = json.dumps(structured)
-        req.field_confidences = json.dumps(fc_map)
-        req.overall_confidence = round(sum(fc_map.values()) / len(fc_map)) if fc_map else 0.5
-        req.status = "in_review" 
-        req.updated_at = datetime.datetime.now(datetime.timezone.utc)
-        
-        sess.add(req)
-        sess.commit()
-        sess.refresh(req)
-        
-        return req.model_dump()
-
-    finally:
-        sess.close()

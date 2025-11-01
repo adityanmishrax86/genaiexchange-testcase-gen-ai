@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from src.db import get_session
 from src.models import TestCase, Requirement
-from src.services.jira_client import create_jira_issue
+from src.services.jira_client import create_jira_issues_from_testcases
 from sqlmodel import select
 import json, tempfile, os, csv, datetime
 from fastapi.responses import FileResponse
@@ -14,7 +14,7 @@ class JiraConfig(BaseModel):
     url: str
     project_key: str
     api_token: str
-    username: str # Your email address
+    username: str
 
 class JiraExportPayload(BaseModel):
     jira_config: JiraConfig
@@ -27,8 +27,9 @@ def push_to_jira(payload: JiraExportPayload):
     """
     created_issue_keys = []
     errors = []
-    
+
     with get_session() as sess:
+        test_cases = []
         for tc_id in payload.test_case_ids:
             test_case = sess.get(TestCase, tc_id)
             if not test_case:
@@ -39,24 +40,31 @@ def push_to_jira(payload: JiraExportPayload):
             if not requirement:
                 errors.append(f"Requirement for Test Case ID {tc_id} not found.")
                 continue
-            
+
+            tc_dict = test_case.model_dump()
+            req_dict = json.loads(requirement.structured) if requirement.structured else {}
+            req_dict["RequirementID"] = requirement.requirement_id or f"REQ-{requirement.id}"
+            req_dict["RequirementDescription"] = requirement.raw_text
+
+            tc_dict.update(req_dict)
+            test_cases.append(tc_dict)
+
+        if test_cases:
             try:
-                test_case_dict = test_case.model_dump()
-                requirement_dict = requirement.model_dump()
-                
                 jira_config_dict = payload.jira_config.model_dump()
-                
-                new_key = create_jira_issue(jira_config_dict, test_case_dict, requirement_dict)
-                
-                test_case.jira_issue_key = new_key
-                test_case.status = "pushed"
-                sess.add(test_case)
+                payload_dict = {"TestCase": test_cases}
+                created_issue_keys = create_jira_issues_from_testcases(jira_config_dict, payload_dict)
+
+                for tc_id, key in zip(payload.test_case_ids, created_issue_keys):
+                    tc = sess.get(TestCase, tc_id)
+                    if tc:
+                        tc.jira_issue_key = key
+                        tc.status = "pushed"
+                        sess.add(tc)
                 sess.commit()
-                
-                created_issue_keys.append(new_key)
 
             except Exception as e:
-                errors.append(f"Failed to create issue for Test Case {test_case.test_case_id}: {e}")
+                errors.append(f"Failed to create JIRA issues: {str(e)}")
 
     if errors:
         if created_issue_keys:
@@ -113,7 +121,39 @@ def export_traceability_matrix(doc_id: int = Query(...)):
                         })
 
     return FileResponse(
-        tmp_path, 
-        filename=f"traceability_matrix_{doc_id}_{int(datetime.datetime.now().timestamp())}.csv", 
+        tmp_path,
+        filename=f"traceability_matrix_{doc_id}_{int(datetime.datetime.now().timestamp())}.csv",
         media_type="text/csv"
     )
+
+@router.get("/api/export/testcases/download")
+def export_testcases_download(upload_session_id: str = Query(None), doc_id: int = Query(None)):
+    """
+    Export generated test cases to CSV format.
+    Filters by upload session ID and/or document ID.
+    """
+    sess = get_session()
+    q = select(TestCase).join(Requirement, TestCase.requirement_id == Requirement.id).join(Document, Requirement.doc_id == Document.id).where(TestCase.status == "generated")
+    if upload_session_id:
+        q = q.where(Document.upload_session_id == upload_session_id)
+    if doc_id:
+        q = q.where(Requirement.doc_id == doc_id)
+    rows = sess.exec(q).all()
+    if not rows:
+        sess.close()
+        raise HTTPException(status_code=404, detail="No generated testcases to export")
+    fd, tmp_path = tempfile.mkstemp(suffix=".csv")
+    with os.fdopen(fd, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=["test_case_id","requirement_id","generated_at","status","evidence"])
+        writer.writeheader()
+        for t in rows:
+            evidence = json.loads(t.evidence_json) if t.evidence_json else []
+            writer.writerow({
+                "test_case_id": t.test_case_id,
+                "requirement_id": t.requirement_id,
+                "generated_at": t.generated_at.isoformat(),
+                "status": t.status,
+                "evidence": "; ".join([str(e) for e in evidence])
+            })
+    sess.close()
+    return FileResponse(tmp_path, filename=f"test_cases_{int(datetime.datetime.now().timestamp())}.csv", media_type="text/csv")

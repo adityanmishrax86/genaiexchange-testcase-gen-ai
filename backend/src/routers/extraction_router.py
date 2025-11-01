@@ -3,39 +3,13 @@ from fastapi import APIRouter, HTTPException, Query, logger
 from src.db import get_session
 from src.models import Document, Requirement, GenerationEvent
 from src.services.extraction import call_vertex_extraction
+from src.services.document_parser import extract_text_from_file
 from sqlmodel import select
 import json
 import os
 import datetime
-import pandas as pd
-import PyPDF2
 
 router = APIRouter()
-
-def extract_text_from_file(filepath: str) -> str:
-    """
-    Reads a file and extracts its text content based on its extension.
-    """
-    text = ""
-    try:
-        if filepath.endswith(".pdf"):
-            with open(filepath, "rb") as f:
-                reader = PyPDF2.PdfReader(f)
-                for page in reader.pages:
-                    text += page.extract_text() + "\n\n"
-        elif filepath.endswith(".csv"):
-            df = pd.read_csv(filepath)
-            text = df.to_string()
-        elif filepath.endswith(".xlsx"):
-            df = pd.read_excel(filepath)
-            text = df.to_string()
-        else:  # Default to plain text
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                text = f.read()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse file {os.path.basename(filepath)}: {e}")
-    
-    return text
 
 @router.post("/api/extract/{doc_id}")
 def extract_for_doc(doc_id: int, upload_session_id: str = Query(None)):

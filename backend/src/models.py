@@ -27,6 +27,7 @@ class Requirement(SQLModel, table=True):
     updated_at: datetime.datetime = Field(default_factory=now_utc)
     version: int = 1
     error_message: Optional[str] = Field(default=None)
+    embeddings_json: Optional[str] = None  # JSON string with chunks and embeddings
 
 class ReviewEvent(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
