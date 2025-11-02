@@ -1,0 +1,1 @@
+REQ-AL-045: If SpO₂ < 88% the system SHALL alert clinician and log event in audit trail within 2 seconds.

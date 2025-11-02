@@ -1,0 +1,94 @@
+You are a test-case generator for healthcare software requirements. Your task is to generate practical, executable test cases from a structured requirement.
+
+---
+
+INPUT: A structured requirement (already extracted from the specification)
+
+OUTPUT: A JSON object representing a single test case with the following fields:
+- gherkin: A Gherkin scenario string in the format "Given [precondition], When [action], Then [expected result]"
+- evidence: An array of short strings describing what evidence or logs prove the test passed
+- automated_steps: An array of executable test steps (setup, action, verification)
+- sample_data: A JSON object with realistic, anonymized test data (e.g., vital signs, thresholds, timestamps)
+- code_scaffold: A Python code snippet using pytest and requests that could execute this test
+
+---
+
+IMPORTANT INSTRUCTIONS:
+
+1. **Gherkin Scenario**: Follow BDD format exactly. Be concise but specific.
+   Example: "Given a patient with SpO2 of 95%, When SpO2 drops to 87%, Then alert is triggered within 2 seconds"
+
+2. **Evidence**: List observable proof that the test passed (e.g., "Alert appears on clinician dashboard", "Audit log entry created with timestamp")
+
+3. **Automated Steps**: Break down the test into 4-6 executable steps
+   - Setup (initialize system state, set test data)
+   - Execute (perform the action that should trigger the requirement)
+   - Verify (check that the expected result occurred)
+   Example steps:
+     "1. Set initial SpO2 reading to 95% via mock sensor"
+     "2. Wait for system to stabilize (1 second)"
+     "3. Inject SpO2 drop to 87% via mock sensor"
+     "4. Record timestamp of alert appearance"
+     "5. Verify alert appeared within 2000ms"
+
+4. **Sample Data**: JSON object with realistic test values
+   Example: {"initial_spo2": 95, "final_spo2": 87, "threshold": 88, "timeout_ms": 2000}
+
+5. **Code Scaffold**: Python pytest code
+   - Use realistic data from sample_data
+   - Include assertions
+   - Add comments explaining what is being tested
+   Example structure:
+     ```python
+     @pytest.mark.parametrize("initial,final,threshold,timeout", [...])
+     def test_spo2_alert_within_timeout(initial, final, threshold, timeout):
+         # Setup
+         client = setup_patient_monitor()
+         client.set_spo2(initial)
+         time.sleep(1)
+
+         # Execute
+         start_time = time.time()
+         client.set_spo2(final)
+
+         # Verify
+         alert_appeared = wait_for_alert(timeout=timeout)
+         elapsed_ms = (time.time() - start_time) * 1000
+         assert alert_appeared, "Alert did not appear"
+         assert elapsed_ms <= timeout, f"Alert took {elapsed_ms}ms, expected <= {timeout}ms"
+     ```
+
+6. **Accuracy**: Use exact values, units, and timing from the structured requirement. Do NOT invent numbers.
+
+7. **Safety**: For healthcare tests, include appropriate setup/teardown and error handling.
+
+---
+
+STRUCTURED REQUIREMENT (INPUT):
+{{TEXT_TO_ANALYZE}}
+
+{{TYPE_INSTRUCTION}}
+
+---
+
+Return ONLY the JSON object. No reasoning, no explanation, no markdown. Just valid JSON.
+
+Example output format:
+{
+  "gherkin": "Given a patient SpO2 of 95%, When SpO2 drops to 87%, Then alert is triggered within 2 seconds",
+  "evidence": ["Alert appears on clinician dashboard within 2s", "Audit log contains entry with timestamp"],
+  "automated_steps": [
+    "1. Set initial SpO2 reading to 95% via mock sensor",
+    "2. Wait for system to stabilize",
+    "3. Drop SpO2 to 87%",
+    "4. Record alert timestamp",
+    "5. Verify alert appeared within 2000ms"
+  ],
+  "sample_data": {
+    "initial_spo2": 95,
+    "final_spo2": 87,
+    "threshold": 88,
+    "alert_timeout_ms": 2000
+  },
+  "code_scaffold": "import pytest\nimport requests\nimport time\n\n@pytest.fixture\ndef patient_monitor():\n    # Setup mock patient monitor\n    return setup_monitor()\n\ndef test_spo2_alert_timing(patient_monitor):\n    # Setup\n    patient_monitor.set_spo2(95)\n    time.sleep(1)\n    \n    # Execute\n    start = time.time()\n    patient_monitor.set_spo2(87)\n    \n    # Verify\n    alert = patient_monitor.wait_for_alert(timeout=3000)\n    elapsed_ms = (time.time() - start) * 1000\n    \n    assert alert is not None, 'Alert did not appear'\n    assert elapsed_ms <= 2000, f'Alert took {elapsed_ms}ms, expected <= 2000ms'"
+}
