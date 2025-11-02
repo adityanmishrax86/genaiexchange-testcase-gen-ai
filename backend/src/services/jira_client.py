@@ -1,21 +1,50 @@
-import os
-from typing import Dict, Any, List, Optional
-from jira import JIRA, JIRAError
-from dotenv import load_dotenv
+"""JIRA integration service for pushing test cases as JIRA issues.
 
+This service handles the creation of JIRA issues from generated test cases.
+JIRA configuration is loaded from environment variables:
+- JIRA_BASE_URL_PRAJNA: JIRA instance URL
+- JIRA_API_USER_PRAJNA: JIRA API user email
+- JIRA_API_TOKEN_PRAJNA: JIRA API token
+- JIRA_ORG_ID: Organization ID (optional)
+
+Usage:
+    from src.services.jira_client import create_jira_issues_from_testcases
+
+    jira_config = {
+        "url": "https://jira.example.com",
+        "username": "user@example.com",
+        "api_token": "token123",
+        "project_key": "TCG",
+        "issue_type_name": "Test",  # optional
+    }
+
+    payload = {
+        "TestCase": [
+            {
+                "RequirementID": "REQ-001",
+                "RequirementDescription": "System shall...",
+                "TestObjective": "Verify that...",
+                # ... other fields
+            },
+            # ... more test cases
+        ]
+    }
+
+    issue_keys = create_jira_issues_from_testcases(jira_config, payload)
+    # Returns: ["TCG-123", "TCG-124", ...]
+"""
+import os
+from typing import Any, Dict, List, Optional
+
+from dotenv import load_dotenv
+from jira import JIRA, JIRAError
 
 load_dotenv()
+
 JIRA_BASE_URL = os.getenv("JIRA_BASE_URL_PRAJNA")
 JIRA_USER = os.getenv("JIRA_API_USER_PRAJNA")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN_PRAJNA")
-JIRA_ORG_ID=os.getenv("JIRA_ORG_ID")
-
-
-# Core: Create one or more JIRA "Test" issues from upstream Gemini TestCase JSON.
-# Input payload shape (batch):
-# {
-#   "TestCase": [ { ...one test case... }, { ... }, ... ]
-# }
+JIRA_ORG_ID = os.getenv("JIRA_ORG_ID")
 
 
 def _get_jira_client(jira_config: Dict[str, Any]) -> JIRA:

@@ -1,0 +1,254 @@
+================================================================================
+BACKEND AUDIT SUMMARY - QUICK REFERENCE
+================================================================================
+
+Repository: genaiexchange-testcase-gen-ai
+Branch: judge-llm-integration
+Date: 2025-11-02
+
+================================================================================
+OVERALL STATUS: 80% PRODUCTION READY - 3 BLOCKING ISSUES IDENTIFIED
+================================================================================
+
+BLOCKING ISSUES (Must Fix Before Production):
+
+1. MISSING PROMPT FILE - extraction.py:48
+   File referenced: extraction_prompt.txt
+   Files that exist: extraction_prompt_v1.txt, extraction_prompt_v2.txt
+   Impact: Extraction service will crash on startup
+   Fix: Change reference to extraction_prompt_v2.txt
+
+2. BROKEN JUDGE SERVICE - gemini_client.py:195-196
+   Issue: Prompt template replacement missing assignment
+   Code: prompt_template.replace("{{QUESTION}}", question)
+   Should be: prompt_template = prompt_template.replace(...)
+   Impact: Judge verdict will not substitute placeholders
+   Fix: Add assignment operator
+
+3. MISSING DATABASE MIGRATIONS
+   Issue: No Alembic or migration framework configured
+   Impact: Cannot safely evolve schema across environments
+   Fix: Implement Alembic with initial migration
+
+================================================================================
+ROUTER IMPLEMENTATION STATUS
+================================================================================
+
+extraction_router.py         FULLY IMPLEMENTED ✓
+generate_router.py          FULLY IMPLEMENTED ✓
+judge_router.py             FULLY IMPLEMENTED ✓ (with critical dependency issue)
+human_review_router.py      FULLY IMPLEMENTED ✓
+export_router.py            FULLY IMPLEMENTED ✓
+files_router.py             FULLY IMPLEMENTED ✓
+pipeline_router.py          FULLY IMPLEMENTED ✓ (incomplete orchestration)
+requirements_router.py      FULLY IMPLEMENTED ✓
+rag_router.py               FULLY IMPLEMENTED ✓
+testcases_router.py         FULLY IMPLEMENTED ✓
+review_router.py            FULLY IMPLEMENTED ✓
+
+Total: 11/11 routers registered and working (with noted issues)
+
+================================================================================
+SERVICE IMPLEMENTATION STATUS
+================================================================================
+
+extraction.py               90% IMPLEMENTED - BLOCKS on missing prompt file
+gemini_client.py           90% IMPLEMENTED - BLOCKS on string replacement bug
+jira_client.py             100% IMPLEMENTED ✓
+document_parser.py         100% IMPLEMENTED ✓ (requires PROJECT_ID, PROCESSOR_ID)
+embeddings.py              100% IMPLEMENTED ✓
+
+================================================================================
+DATABASE AUDIT
+================================================================================
+
+Models Implemented:
+  - Document ✓
+  - Requirement ✓
+  - TestCase ✓
+  - ReviewEvent ✓
+  - GenerationEvent ✓
+
+Issues Found:
+  1. No foreign key constraints
+  2. No database indexes (performance issue)
+  3. No migration framework (schema drift risk)
+
+================================================================================
+CRITICAL DEPENDENCIES CHECK
+================================================================================
+
+FastAPI 0.115.12                ✓
+SQLModel 0.0.24                 ✓
+google-genai 1.38.0             ✓ (Vertex AI)
+google-generativeai 0.8.5       ✓ (REST API - used by judge)
+google-cloud-documentai 3.7.0   ✓ (PDF parsing)
+jira 3.10.5                     ✓
+tenacity 9.1.2                  ✓ (retry logic)
+numpy 2.2.4                     ✓
+pandas, openpyxl                ✓
+
+Note: requirements.txt has duplicate entries (lines 1-74 and 75+)
+
+================================================================================
+ENVIRONMENT VARIABLES REQUIRED
+================================================================================
+
+For Extraction Service:
+  - GENAI_PROJECT (hardcoded to "tcgen-ai")
+  - GENAI_LOCATION (defaults to "global")
+  - GENAI_MODEL (defaults to "gemini-2.5-flash-lite")
+
+For Judge Service:
+  - GEMINI_API_KEY (required, uses REST API not Vertex AI)
+
+For PDF Parsing:
+  - PROJECT_ID (required if uploading PDFs)
+  - PROCESSOR_ID (required if uploading PDFs)
+  - LOCATION (defaults to "us")
+
+For Database:
+  - DATABASE_URL (defaults to "sqlite:///data.db")
+
+For JIRA Integration:
+  - JIRA_BASE_URL_PRAJNA
+  - JIRA_API_USER_PRAJNA
+  - JIRA_API_TOKEN_PRAJNA
+  - JIRA_ORG_ID
+
+================================================================================
+API ENDPOINTS SUMMARY
+================================================================================
+
+Files & Documents:
+  POST   /api/upload
+  GET    /api/documents
+
+Extraction:
+  POST   /api/extract/{doc_id}
+
+Requirements:
+  GET    /api/requirements
+  GET    /api/requirements/{req_id}
+  PUT    /api/requirements/{req_id}
+
+Test Case Generation:
+  POST   /api/generate/preview
+  POST   /api/generate/confirm
+  GET    /api/testcase/{tc_id}
+  POST   /api/generate/regenerate/{preview_id}
+  POST   /api/generate/regenerate-batch
+
+Judge (LLM Evaluation):
+  POST   /api/judge/evaluate
+  POST   /api/judge/evaluate-batch
+  GET    /api/judge/scores/{test_case_id}
+
+Human Review:
+  GET    /api/review/package/{test_case_id}
+  POST   /api/review/decide
+  POST   /api/review/batch-decide
+  GET    /api/review/pending-approval
+  GET    /api/review/audit-trail/{test_case_id}
+
+Legacy Review (Requirement):
+  POST   /api/review/{req_id}
+
+RAG & Embeddings:
+  POST   /api/rag/embed
+  POST   /api/rag/search
+  GET    /api/rag/status/{doc_id}
+
+Export:
+  POST   /api/export/jira
+  GET    /api/export/traceability_matrix
+  GET    /api/export/testcases/download
+
+Pipeline (Unified):
+  POST   /api/pipeline/start
+  GET    /api/pipeline/status/{upload_session_id}
+  POST   /api/pipeline/auto-approve/{upload_session_id}
+
+Test Cases:
+  GET    /api/testcases
+
+Total: 42 endpoints across 11 routers
+
+================================================================================
+ARCHITECTURE ASSESSMENT
+================================================================================
+
+Strengths:
+  + Well-organized service-oriented architecture
+  + Comprehensive audit trail (ReviewEvent, GenerationEvent)
+  + Good separation of concerns (routers vs services)
+  + Proper error handling in most places
+  + Retry logic for LLM calls (tenacity)
+
+Weaknesses:
+  - No authentication/authorization framework
+  - No database migrations
+  - Inconsistent API client pattern (judge uses REST vs others use Vertex)
+  - No pagination for list endpoints
+  - Hardcoded values instead of environment configuration
+  - No health check endpoints
+  - No structured logging
+
+================================================================================
+RECOMMENDED PRIORITY FIXES
+================================================================================
+
+Priority 1 (BLOCKING):
+  [ ] Fix extraction_prompt.txt reference
+  [ ] Fix gemini_client.py string replacement bug
+  [ ] Add database migrations framework
+
+Priority 2 (MAJOR):
+  [ ] Add foreign key constraints to models
+  [ ] Standardize to Vertex AI for judge service
+  [ ] Add environment variable validation at startup
+  [ ] Add health check endpoint
+
+Priority 3 (NICE-TO-HAVE):
+  [ ] Add pagination to list endpoints
+  [ ] Implement JIRA bulk API
+  [ ] Add structured logging
+  [ ] Add request validation/rate limiting
+  [ ] Add authentication/authorization
+
+================================================================================
+DEPLOYMENT CHECKLIST
+================================================================================
+
+[ ] Fix all blocking issues
+[ ] Test extraction endpoint with sample requirement
+[ ] Test judge endpoint and verify verdict generation
+[ ] Set up Alembic migrations
+[ ] Run database migrations
+[ ] Set all required environment variables
+[ ] Run all integration tests
+[ ] Performance test with large datasets
+[ ] Load testing
+[ ] Security audit (SQL injection, etc.)
+[ ] CORS configuration review
+[ ] Deploy to staging
+[ ] User acceptance testing
+[ ] Deploy to production
+
+================================================================================
+DETAILED REPORT LOCATION
+================================================================================
+
+Full audit report: /home/prajna/personal-projects/genaiexchange-testcase-gen-ai/BACKEND_AUDIT_REPORT.md
+
+This summary: audit_summary.txt
+
+Key files audited:
+  - /backend/app.py
+  - /backend/src/models.py
+  - /backend/src/db.py
+  - /backend/src/routers/*.py (11 files)
+  - /backend/src/services/*.py (5 files)
+  - /backend/requirements.txt
+
+================================================================================

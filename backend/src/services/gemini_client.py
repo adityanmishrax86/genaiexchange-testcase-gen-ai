@@ -182,42 +182,65 @@ class GeminiClient:
     def build_judge_prompt(self,template_filepath:str,question:str, answer:Any):
         """
         reads the prompt template and insert the QA pair to be verified
-    
+
         """
         try:
-            
+
             with open(os.path.join(_PROMPT_DIR, template_filepath),"r", encoding="utf-8") as f:
                 prompt_template=f.read()
         except FileNotFoundError:
             logging.error(f"CRITICAL: template file '{template_filepath}' not found in prompts/ directory.")
             raise
-        
-        prompt_template.replace("{{QUESTION}}", question)
-        prompt_template.replace("{{ANSWER}}", answer)
-        
+
+        prompt_template = prompt_template.replace("{{QUESTION}}", question)
+        prompt_template = prompt_template.replace("{{ANSWER}}", str(answer))
+
         return prompt_template
         
             
         
     
-    def generate_structured_response(self, contents:str, response_schema:Optional[Any]=None):
-        '''
-        Generate structured response and JSON parse them into dict.
-        '''
-        client=genai.Client(
-            api_key=self.api_key,
-        )
-        response=client.models.generate_content(
+    def generate_structured_response(
+        self, contents: str, response_schema: Optional[Any] = None
+    ) -> str:
+        """Generate structured response with optional schema validation.
+
+        When response_schema is provided, the API enforces that response
+        matches the schema structure. The method returns the parsed response
+        (as dict) when schema is provided, or raw JSON text when not.
+
+        Args:
+            contents: Prompt string to send to model
+            response_schema: Optional Pydantic BaseModel for response validation
+
+        Returns:
+            If response_schema provided: JSON string (already validated by API)
+            If no schema: Raw JSON string from model
+        """
+        client = genai.Client(api_key=self.api_key)
+
+        config = {"response_mime_type": "application/json"}
+        if response_schema:
+            config["response_schema"] = response_schema
+
+        response = client.models.generate_content(
             model=self.model_name,
             contents=contents,
-            config={
-                "response_mime_type":"application/json",
-                "response_schema":response_schema
-            }
-            
+            config=config,
         )
-        # return response.parsed or None
-        return response.text or " "
+
+        # When schema is provided, use response.parsed (already validated)
+        # Otherwise use response.text (raw JSON string)
+        if response_schema:
+            # response.parsed returns the model instance
+            # Convert to JSON string for consistency
+            if hasattr(response, "parsed") and response.parsed:
+                return response.parsed.model_dump_json()
+            # Fallback to text if parsed not available
+            return response.text or "{}"
+
+        # No schema: return raw JSON text
+        return response.text or "{}"
 
 
 if __name__=="__main__":
