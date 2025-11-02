@@ -45,10 +45,10 @@ def _build_extraction_prompt(text: str) -> str:
     Reads the prompt template from a file and injects the requirement text.
     """
     try:
-        with open(os.path.join(_PROMPT_DIR, "extraction_prompt.txt"), "r") as f:
+        with open(os.path.join(_PROMPT_DIR, "extraction_prompt_v2.txt"), "r") as f:
             prompt_template = f.read()
     except FileNotFoundError:
-        logger.error("CRITICAL: extraction_prompt.txt not found in prompts/ directory.")
+        logger.error("CRITICAL: extraction_prompt_v2.txt not found in prompts/ directory.")
         raise RuntimeError("Prompt template file not found.")
     
     return prompt_template.replace("{{TEXT_TO_ANALYZE}}", text)

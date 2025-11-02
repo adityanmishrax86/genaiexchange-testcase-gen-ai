@@ -182,19 +182,19 @@ class GeminiClient:
     def build_judge_prompt(self,template_filepath:str,question:str, answer:Any):
         """
         reads the prompt template and insert the QA pair to be verified
-    
+
         """
         try:
-            
+
             with open(os.path.join(_PROMPT_DIR, template_filepath),"r", encoding="utf-8") as f:
                 prompt_template=f.read()
         except FileNotFoundError:
             logging.error(f"CRITICAL: template file '{template_filepath}' not found in prompts/ directory.")
             raise
-        
-        prompt_template.replace("{{QUESTION}}", question)
-        prompt_template.replace("{{ANSWER}}", answer)
-        
+
+        prompt_template = prompt_template.replace("{{QUESTION}}", question)
+        prompt_template = prompt_template.replace("{{ANSWER}}", str(answer))
+
         return prompt_template
         
             
