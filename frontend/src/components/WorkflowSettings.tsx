@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { WorkflowConfig } from '../config/workflowConfig';
 
 interface WorkflowSettingsProps {
@@ -9,23 +9,15 @@ interface WorkflowSettingsProps {
 
 /**
  * Workflow Settings Modal
- * Allows users to toggle optional workflow components:
- * - Standard Document Upload
- * - Judge LLM Evaluation
+ * Displays the fixed workflow configuration (no user-configurable options for MVP)
+ * All nodes are mandatory in the current pipeline
  */
 export default function WorkflowSettings({
   config,
   onConfigChange,
   onClose,
 }: WorkflowSettingsProps) {
-  const [includeStandards, setIncludeStandards] = useState(config.includeStandards);
-  const [includeJudge, setIncludeJudge] = useState(config.includeJudge);
-
-  const handleSave = () => {
-    onConfigChange({
-      includeStandards,
-      includeJudge,
-    });
+  const handleClose = () => {
     onClose();
   };
 
@@ -39,113 +31,79 @@ export default function WorkflowSettings({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Workflow Settings
+            Workflow Information
           </h2>
-          <p className="text-blue-100 text-sm mt-1">Configure optional workflow components</p>
+          <p className="text-blue-100 text-sm mt-1">Healthcare test generation pipeline</p>
         </div>
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          {/* Include Standards Option */}
-          <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="includeStandards"
-                checked={includeStandards}
-                onChange={(e) => setIncludeStandards(e.target.checked)}
-                className="mt-1 w-4 h-4 text-blue-600 rounded cursor-pointer"
-              />
-              <div className="flex-1">
-                <label
-                  htmlFor="includeStandards"
-                  className="block font-semibold text-gray-800 cursor-pointer hover:text-blue-600"
-                >
-                  📋 Include Standard Documents
-                </label>
-                <p className="text-xs text-gray-600 mt-1">
-                  Upload compliance standards (IEC-62304, FDA, ISO) to enhance test case generation with standards-based coverage.
-                </p>
-                <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-                  Adds: Upload Standards node between Extract and Generate
-                </div>
+          {/* Fixed Workflow Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm font-semibold text-blue-900 mb-2">✅ Healthcare Test Generation Pipeline</p>
+            <p className="text-xs text-blue-800 mb-3">
+              All workflow nodes are mandatory for this MVP. The pipeline includes quality assurance and compliance validation.
+            </p>
+          </div>
+
+          {/* Workflow Structure */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-gray-700 mb-3">📊 Workflow Structure (7 Mandatory Nodes)</p>
+            <div className="text-xs text-gray-700 space-y-2 font-mono bg-white p-3 rounded border">
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600 font-bold">1</span>
+                <span>📤 Upload Requirements</span>
+              </div>
+              <div className="ml-6 text-gray-400">↓</div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-600 font-bold">2</span>
+                <span>🔍 Extract Requirements</span>
+              </div>
+              <div className="ml-6 text-gray-400">↓</div>
+              <div className="flex items-center gap-2">
+                <span className="text-purple-600 font-bold">3</span>
+                <span>👤 Review Requirements</span>
+              </div>
+              <div className="ml-6 text-gray-400">↓</div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-600 font-bold">4</span>
+                <span>🤖 Generate Test Cases</span>
+              </div>
+              <div className="ml-6 text-gray-400">↓</div>
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-600 font-bold">5</span>
+                <span>⚖️ Judge LLM Evaluation</span>
+              </div>
+              <div className="ml-6 text-gray-400">↓</div>
+              <div className="flex items-center gap-2">
+                <span className="text-purple-600 font-bold">6</span>
+                <span>✅ Approve Test Cases</span>
+              </div>
+              <div className="ml-6 text-gray-400">↓</div>
+              <div className="flex items-center gap-2">
+                <span className="text-red-600 font-bold">7</span>
+                <span>🔌 Export to ALM</span>
               </div>
             </div>
           </div>
 
-          {/* Include Judge Option */}
-          <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="includeJudge"
-                checked={includeJudge}
-                onChange={(e) => setIncludeJudge(e.target.checked)}
-                className="mt-1 w-4 h-4 text-blue-600 rounded cursor-pointer"
-              />
-              <div className="flex-1">
-                <label
-                  htmlFor="includeJudge"
-                  className="block font-semibold text-gray-800 cursor-pointer hover:text-blue-600"
-                >
-                  🤖 Include Judge LLM Evaluation
-                </label>
-                <p className="text-xs text-gray-600 mt-1">
-                  Enable AI-powered quality evaluation with 8-category rubric scoring (Correctness, Timing, Actions, Logging, Standards, Boundary, Consistency, Confidence).
-                </p>
-                <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-                  Adds: Judge LLM Evaluation node between Generate and Review
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Workflow Preview */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-4">
-            <p className="text-xs font-semibold text-gray-700 mb-2">📊 Workflow Preview</p>
-            <div className="text-xs text-gray-600 space-y-1 font-mono">
-              <div>Upload Requirements</div>
-              <div className="ml-2 text-gray-400">↓</div>
-              <div>Extract</div>
-              {includeStandards && (
-                <>
-                  <div className="ml-2 text-gray-400">↓</div>
-                  <div className="text-blue-600">Upload Standards</div>
-                  <div className="ml-2 text-gray-400">↓</div>
-                </>
-              )}
-              {!includeStandards && <div className="ml-2 text-gray-400">↓</div>}
-              <div>Generate Tests</div>
-              {includeJudge && (
-                <>
-                  <div className="ml-2 text-gray-400">↓</div>
-                  <div className="text-blue-600">Judge LLM Evaluation</div>
-                  <div className="ml-2 text-gray-400">↓</div>
-                </>
-              )}
-              {!includeJudge && <div className="ml-2 text-gray-400">↓</div>}
-              <div>Human Review</div>
-              <div className="ml-2 text-gray-400">↓</div>
-              <div>Export to ALM</div>
-            </div>
+          {/* Notes */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-xs text-yellow-900 space-y-1">
+              <div><span className="font-semibold">Pipeline Overview:</span></div>
+              <div>Users approve which requirements to use before test generation, then approve which test cases to push after quality evaluation.</div>
+              <div className="mt-2"><span className="font-semibold">MVP Status:</span> All 7 nodes are mandatory. No user configuration needed.</div>
+            </p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex gap-3 p-6 bg-gray-50 border-t rounded-b-lg">
           <button
-            onClick={handleSave}
+            onClick={handleClose}
             className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Save Settings
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors"
-          >
-            Cancel
+            Close
           </button>
         </div>
       </div>
