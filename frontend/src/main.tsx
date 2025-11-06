@@ -11,9 +11,9 @@ if (!container) throw new Error("Root element not found");
 createRoot(container).render(
   <BrowserRouter>
     <Routes>
-      <Route path="/tcgen-ai-genaiexchange-frontend/" element={<App />} />
-      <Route path="/tcgen-ai-genaiexchange-frontend/eval" element={<SimplifiedEval />} />
-      <Route path="*" element={<Navigate to="/tcgen-ai-genaiexchange-frontend/" replace />} />
+      <Route path="/eval" element={<App />} />
+      <Route path="/lazy-eval" element={<SimplifiedEval />} />
+      <Route path="*" element={<Navigate to="/eval" replace />} />
     </Routes>
   </BrowserRouter>
 );

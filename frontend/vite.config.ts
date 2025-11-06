@@ -4,5 +4,6 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(),   tailwindcss(),],
-  base: '/tcgen-ai-genaiexchange-frontend/', // <-- Use your bucket name here
+  // base: '/tcgen-ai-genaiexchange-frontend/', // <-- Use your bucket name here
+  base:'/'
 });
