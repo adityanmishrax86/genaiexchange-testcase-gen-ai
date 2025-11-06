@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
   useNodesState,
@@ -37,6 +38,7 @@ import {
   WorkflowConfig,
   initializeWorkflow,
 } from './config/workflowConfig';
+import { useMockApi } from './hooks/useMockApi';
 
 // Node type mappings for the 5-stage pipeline
 const nodeTypes = {
@@ -51,6 +53,18 @@ const nodeTypes = {
 function WorkflowCanvas() {
   const { state } = useWorkflow();
   const reactFlowWrapper = useRef(null);
+  const navigate = useNavigate();
+  const { isMockEnabled, toggleMock } = useMockApi();
+
+  // Enable mock API by default on first load
+  useEffect(() => {
+    const hasInitialized = localStorage.getItem('mockApiInitialized');
+    if (!hasInitialized) {
+      localStorage.setItem('mockApiEnabled', 'true');
+      localStorage.setItem('mockApiInitialized', 'true');
+      window.location.reload(); // Reload to apply mock API state
+    }
+  }, []);
 
   // Workflow configuration for optional features
   const [workflowConfig, setWorkflowConfig] = useState<WorkflowConfig>({
@@ -202,6 +216,24 @@ function WorkflowCanvas() {
                 {workflowStatus.toUpperCase()}
               </span>
             </div>
+            <button
+              onClick={toggleMock}
+              className={`px-3 py-2 rounded-lg transition-colors font-semibold text-xs ${
+                isMockEnabled
+                  ? 'bg-green-500 text-white hover:bg-green-600'
+                  : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+              }`}
+              title={isMockEnabled ? 'Mock API Enabled (Click to use Real API)' : 'Real API (Click to use Mock API)'}
+            >
+              {isMockEnabled ? '🟢 MOCK' : '🔴 REAL'}
+            </button>
+            <button
+              onClick={() => navigate('/tcgen-ai-genaiexchange-frontend/eval')}
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              title="Switch to Simplified Eval"
+            >
+              🚀 Quick Eval
+            </button>
             <button
               onClick={() => setShowSettings(true)}
               className="p-2 bg-white text-blue-600 rounded-lg hover:bg-gray-100 transition-colors"

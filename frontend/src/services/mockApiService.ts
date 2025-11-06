@@ -343,11 +343,11 @@ export async function mockAggregateResults(
 export async function mockCreateEvaluationRun(
   datasetId: string,
   batchId: string | undefined,
-  aggregatedStats: {
-    average_score: number;
-    pass_count: number;
-    fail_count: number;
-  }
+  aggregatedStats?: {
+    average_score?: number;
+    pass_count?: number;
+    fail_count?: number;
+  } | null
 ): Promise<MockEvaluationRunResponse> {
   // Simulate network delay and trace creation
   await delay(800);
@@ -355,13 +355,17 @@ export async function mockCreateEvaluationRun(
   const evalRunId = generateEvalRunId();
   const traceCount = 50;
 
+  // Use default values if stats are missing
+  const defaultScore = 0.85;
+  const averageScore = aggregatedStats?.average_score ?? defaultScore;
+
   return {
     eval_run_id: evalRunId,
     eval_run_name: `Evaluation Run ${new Date().toLocaleString()}`,
     created_at: new Date().toISOString(),
     trace_count: traceCount,
-    score: aggregatedStats.average_score,
-    message: `Evaluation run created with ${traceCount} traces. Score: ${aggregatedStats.average_score.toFixed(2)}`,
+    score: averageScore,
+    message: `Evaluation run created with ${traceCount} traces. Score: ${averageScore.toFixed(2)}`,
   };
 }
 
@@ -432,7 +436,7 @@ export async function mockApiCall(
       return await mockCreateEvaluationRun(
         body?.dataset_id || 'test-dataset',
         body?.batch_id,
-        body?.aggregated_stats || { average_score: 0.85, pass_count: 45, fail_count: 5 }
+        body?.aggregated_stats
       );
     }
 

@@ -66,7 +66,7 @@ export const DatasetHandlerNode = ({ data, isConnectable }: { data: any; isConne
       // 1. Upload CSV file
       // 2. Create Langfuse dataset (with 5x duplication)
       // 3. Build JSONL for OpenAI batch
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || '/api'}/upload`, {
+      const response = await fetchWithMock(`${import.meta.env.VITE_API_BASE || '/api'}/upload`, {
         method: 'POST',
         body: formData,
       });
