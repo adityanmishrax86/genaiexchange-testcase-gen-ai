@@ -1,20 +1,31 @@
 /**
- * Workflow Configuration
+ * Workflow Configuration - LLM Evaluation Pipeline
  *
- * Defines the pre-embedded healthcare test case generation workflow.
- * Nodes are automatically initialized in the correct order with optional features
- * that can be toggled on/off by the user.
+ * 5-Stage Data Pipeline for LLM Evaluation:
+ * 1. Dataset Handler (steps 1-3): Upload CSV → Langfuse Dataset → Build JSONL
+ * 2. LLM Runner (steps 4-10): Upload JSONL → OpenAI Batch → Celery Poll → Download results
+ * 3. Module Executor (steps 11-15): Build Embedding JSONL → OpenAI Embeddings → Poll → Cosine similarity
+ * 4. Results Aggregator (step 16): Calculate stats (avg, min, max, std) → Update eval_run.score
+ * 5. Langfuse Logger (steps 2, 10, 16): Create EvaluationRun → Create traces → Update traces with scores
  */
+
+export type NodeType =
+  | 'datasetHandler'
+  | 'llmRunner'
+  | 'moduleExecutor'
+  | 'resultsAggregator'
+  | 'langfuseLogger';
 
 export interface WorkflowNode {
   id: string;
-  type: 'upload' | 'extract' | 'generate' | 'judge' | 'review' | 'approve' | 'jiraPush';
+  type: NodeType;
   label: string;
   description: string;
   position: { x: number; y: number };
   data: any;
   optional?: boolean;
-  featureKey?: 'includeStandards' | 'includeJudge';
+  featureKey?: 'includeEmbeddings' | 'includeAdvancedStats';
+  stage: 'datasetHandler' | 'llmRunner' | 'moduleExecutor' | 'resultsAggregator' | 'langfuseLogger';
 }
 
 export interface WorkflowEdge {
@@ -24,12 +35,15 @@ export interface WorkflowEdge {
   sourceHandle?: string;
   targetHandle?: string;
   hidden?: boolean;
-  conditionalFeature?: 'includeStandards' | 'includeJudge';
+  conditionalFeature?: 'includeEmbeddings' | 'includeAdvancedStats';
 }
 
+/**
+ * Feature toggles for the evaluation pipeline
+ */
 export interface WorkflowConfig {
-  includeStandards: boolean;  // Upload standard documents (IEC-62304, FDA, etc.)
-  includeJudge: boolean;      // Judge LLM evaluation
+  includeEmbeddings: boolean;      // Include semantic similarity module executor (optional)
+  includeAdvancedStats: boolean;   // Include advanced statistics in results aggregator (optional)
 }
 
 // Standard layout spacing
@@ -37,187 +51,188 @@ const X_OFFSET = 300;  // Horizontal spacing between nodes
 const Y_OFFSET = 100;  // Vertical spacing for alternative paths
 
 /**
- * Default workflow nodes in optimal healthcare test case generation order
+ * Default workflow nodes for LLM Evaluation Pipeline
+ *
+ * 5-Stage Pipeline:
+ * 1. Dataset Handler: CSV upload → Langfuse duplication → JSONL building
+ * 2. LLM Runner: JSONL upload → OpenAI batch creation → polling → result download
+ * 3. Module Executor: Embedding JSONL → semantic similarity (optional)
+ * 4. Results Aggregator: Statistics calculation → eval_run.score update
+ * 5. Langfuse Logger: Evaluation tracing and logging
  */
 export const DEFAULT_WORKFLOW_NODES: WorkflowNode[] = [
-  // 1. Upload Requirements (MANDATORY)
+  // STAGE 1: DATASET HANDLER (Steps 1-3)
+  // Upload CSV → Langfuse Dataset Creation (5x duplication) → Build JSONL for OpenAI
   {
-    id: 'node-1-upload-requirements',
-    type: 'upload',
-    label: 'Upload Requirements',
-    description: 'Upload requirements document (PDF, DOCX, etc.)',
+    id: 'node-1-dataset-handler',
+    type: 'datasetHandler',
+    label: 'Dataset Handler',
+    description: 'Upload CSV → Create Langfuse Dataset with 5x duplication → Build JSONL',
     position: { x: 0, y: 0 },
+    stage: 'datasetHandler',
     data: {
-      name: 'Document Upload',
-      label: 'Upload requirements (mandatory)',
-      processorType: undefined,
+      name: 'Dataset Handler',
+      label: 'Step 1-3: Upload CSV, create Langfuse dataset, build JSONL',
+      processorType: 'datasetHandler',
       optional: false,
       runnable: false,
+      substeps: [
+        { step: 1, name: 'Upload CSV to backend' },
+        { step: 2, name: 'Create Langfuse Dataset (5x duplication)' },
+        { step: 3, name: 'Build JSONL for OpenAI Batch API' },
+      ],
     },
   },
 
-  // 2. Extract Requirements (MANDATORY)
+  // STAGE 2: LLM RUNNER (Steps 4-10)
+  // Upload JSONL → OpenAI Files API → Create Batch → Celery Poll → Download Results
   {
-    id: 'node-2-extract',
-    type: 'extract',
-    label: 'Extract Requirements',
-    description: 'Parse and extract requirements from documents',
+    id: 'node-2-llm-runner',
+    type: 'llmRunner',
+    label: 'LLM Runner',
+    description: 'Upload JSONL → OpenAI Batch API → Poll for completion → Download results',
     position: { x: X_OFFSET, y: 0 },
+    stage: 'llmRunner',
     data: {
-      name: 'Document Parser',
-      label: 'Extract requirements from document',
-      processorType: 'parser',
+      name: 'LLM Runner',
+      label: 'Step 4-10: Run OpenAI batch, wait for completion, download results',
+      processorType: 'llmRunner',
       optional: false,
       runnable: false,
+      substeps: [
+        { step: 4, name: 'Upload JSONL via OpenAI Files API' },
+        { step: 5, name: 'Create batch with OpenAI Batch API' },
+        { step: 6, name: 'Return batch_id to frontend' },
+        { step: 7, name: 'Celery Beat polls batch status (1-24hrs)' },
+        { step: 8, name: 'Log polling progress to Langfuse' },
+        { step: 9, name: 'Batch completes, download result file' },
+        { step: 10, name: 'Parse and validate results' },
+      ],
     },
   },
 
-  // 3. Upload Standards (DISABLED FOR HACKATHON - Feature not needed in MVP)
-  // {
-  //   id: 'node-3-upload-standards',
-  //   type: 'upload',
-  //   label: 'Upload Standards',
-  //   description: 'Upload compliance standards (IEC-62304, FDA, ISO)',
-  //   position: { x: X_OFFSET * 2, y: Y_OFFSET },
-  //   data: {
-  //     name: 'Standards Upload',
-  //     label: 'Upload standards (optional)',
-  //     processorType: undefined,
-  //     optional: true,
-  //     runnable: false,
-  //   },
-  //   optional: true,
-  //   featureKey: 'includeStandards',
-  // },
-
-  // 3. Review Requirements (MANDATORY - approve extracted requirements)
+  // STAGE 3: MODULE EXECUTOR (Steps 11-15) - OPTIONAL
+  // Build Embedding JSONL → OpenAI Embeddings API → Poll → Calculate Cosine Similarity
   {
-    id: 'node-3-review',
-    type: 'review',
-    label: 'Review Requirements',
-    description: 'Manual review and approval of extracted requirements',
-    position: { x: X_OFFSET * 2, y: 0 },
+    id: 'node-3-module-executor',
+    type: 'moduleExecutor',
+    label: 'Embedding Module',
+    description: 'Build embedding JSONL → OpenAI Embeddings → Calculate semantic similarity',
+    position: { x: X_OFFSET * 2, y: 100 },
+    stage: 'moduleExecutor',
+    optional: true,
+    featureKey: 'includeEmbeddings',
     data: {
-      name: 'Human Review',
-      label: 'Approve extracted requirements',
-      optional: false,
+      name: 'Embedding Module',
+      label: 'Step 11-15: Embeddings & semantic similarity (optional)',
+      processorType: 'moduleExecutor',
+      optional: true,
       runnable: false,
+      substeps: [
+        { step: 11, name: 'Build embedding JSONL' },
+        { step: 12, name: 'Upload via OpenAI Embeddings API' },
+        { step: 13, name: 'Celery Beat polls completion' },
+        { step: 14, name: 'Download embedding results' },
+        { step: 15, name: 'Calculate cosine similarity per trace' },
+      ],
     },
   },
 
-  // 4. Generate Tests (MANDATORY)
+  // STAGE 4: RESULTS AGGREGATOR (Step 16)
+  // Calculate aggregate stats (avg, min, max, std) → Update eval_run.score
   {
-    id: 'node-4-generate',
-    type: 'generate',
-    label: 'Generate Tests',
-    description: 'Generate test cases from approved requirements',
+    id: 'node-4-results-aggregator',
+    type: 'resultsAggregator',
+    label: 'Results Aggregator',
+    description: 'Calculate aggregate statistics → Update eval_run score',
     position: { x: X_OFFSET * 3, y: 0 },
+    stage: 'resultsAggregator',
     data: {
-      name: 'Test Generator',
-      label: 'Generate test cases from requirements',
-      processorType: 'generator',
+      name: 'Results Aggregator',
+      label: 'Step 16: Aggregate results & update eval_run.score',
+      processorType: 'resultsAggregator',
       optional: false,
       runnable: false,
+      substeps: [
+        { step: 16, name: 'Calculate aggregate stats (avg, min, max, std)' },
+        { step: 16, name: 'Update eval_run.score' },
+      ],
     },
   },
 
-  // 5. Judge LLM Evaluation (MANDATORY - default behavior)
+  // STAGE 5: LANGFUSE LOGGER
+  // Create EvaluationRun → Create traces for each QnA → Update traces with scores
   {
-    id: 'node-5-judge',
-    type: 'judge',
-    label: 'Judge LLM Evaluation',
-    description: 'AI-powered quality evaluation with 8-category rubric',
+    id: 'node-5-langfuse-logger',
+    type: 'langfuseLogger',
+    label: 'Langfuse Logger',
+    description: 'Create evaluation run → Log traces → Update with scores',
     position: { x: X_OFFSET * 4, y: 0 },
+    stage: 'langfuseLogger',
     data: {
-      name: 'Quality Judge',
-      label: 'Validate quality with Judge LLM',
+      name: 'Langfuse Logger',
+      label: 'Step 2, 10, 16: Create traces, log evaluations',
+      processorType: 'langfuseLogger',
       optional: false,
       runnable: false,
-    },
-    optional: false,
-  },
-
-  // 6. Approve Test Cases (MANDATORY - select test cases to export)
-  {
-    id: 'node-6-approve',
-    type: 'approve',
-    label: 'Approve Test Cases',
-    description: 'Select and approve test cases for export',
-    position: { x: X_OFFSET * 5, y: 0 },
-    data: {
-      name: 'Approve Test Cases',
-      label: 'Select cases to push to JIRA',
-      optional: false,
-      runnable: false,
-    },
-  },
-
-  // 7. Export to System (MANDATORY)
-  {
-    id: 'node-7-export',
-    type: 'jiraPush',
-    label: 'Export to ALM',
-    description: 'Push approved test cases to JIRA, Azure DevOps, TestRail, or Polarion',
-    position: { x: X_OFFSET * 6, y: 0 },
-    data: {
-      name: 'JIRA Export',
-      label: 'Push to ALM system',
-      optional: false,
-      runnable: false,
+      substeps: [
+        { step: 2, name: 'Create EvaluationRun (after dataset)' },
+        { step: 10, name: 'Create traces for each QnA (after LLM)' },
+        { step: 16, name: 'Update traces with final scores (after aggregation)' },
+      ],
     },
   },
 ];
 
 /**
- * Default workflow edges that connect all nodes
- * Edges to optional nodes are conditionally rendered based on workflow config
+ * Default workflow edges for LLM Evaluation Pipeline
+ *
+ * Linear flow: DatasetHandler → LLMRunner → [ModuleExecutor] → ResultsAggregator → LangfuseLogger
+ * Module executor is optional and bypassed when feature is disabled
  */
 export const DEFAULT_WORKFLOW_EDGES: WorkflowEdge[] = [
-  // 1. Upload Requirements → Extract Requirements
+  // 1. Dataset Handler → LLM Runner
   {
     id: 'edge-1-2',
-    source: 'node-1-upload-requirements',
-    target: 'node-2-extract',
+    source: 'node-1-dataset-handler',
+    target: 'node-2-llm-runner',
   },
 
-  // 2. Extract Requirements → Review Requirements (approve which to use)
+  // 2. LLM Runner → Module Executor (CONDITIONAL - includeEmbeddings)
   {
     id: 'edge-2-3',
-    source: 'node-2-extract',
-    target: 'node-3-review',
+    source: 'node-2-llm-runner',
+    target: 'node-3-module-executor',
+    conditionalFeature: 'includeEmbeddings',
   },
 
-  // 3. Review Requirements → Generate Test Cases
+  // 3a. LLM Runner → Results Aggregator (DIRECT, when Module Executor is disabled)
+  {
+    id: 'edge-2-4-direct',
+    source: 'node-2-llm-runner',
+    target: 'node-4-results-aggregator',
+    conditionalFeature: undefined, // Always show but may be hidden if embeddings enabled
+  },
+
+  // 3b. Module Executor → Results Aggregator (CONDITIONAL - includeEmbeddings)
   {
     id: 'edge-3-4',
-    source: 'node-3-review',
-    target: 'node-4-generate',
+    source: 'node-3-module-executor',
+    target: 'node-4-results-aggregator',
+    conditionalFeature: 'includeEmbeddings',
   },
 
-  // 4. Generate Test Cases → Judge LLM Evaluation
+  // 4. Results Aggregator → Langfuse Logger
   {
     id: 'edge-4-5',
-    source: 'node-4-generate',
-    target: 'node-5-judge',
-  },
-
-  // 5. Judge LLM Evaluation → Approve Test Cases (select which to push)
-  {
-    id: 'edge-5-6',
-    source: 'node-5-judge',
-    target: 'node-6-approve',
-  },
-
-  // 6. Approve Test Cases → Export to ALM (JIRA, Azure DevOps, etc.)
-  {
-    id: 'edge-6-7',
-    source: 'node-6-approve',
-    target: 'node-7-export',
+    source: 'node-4-results-aggregator',
+    target: 'node-5-langfuse-logger',
   },
 ];
 
 /**
  * Filter nodes based on workflow configuration
+ * Always show mandatory nodes, conditionally show optional nodes
  */
 export function getVisibleNodes(
   nodes: WorkflowNode[],
@@ -228,8 +243,8 @@ export function getVisibleNodes(
     if (!node.optional) return true;
 
     // Show optional nodes based on feature flags
-    if (node.featureKey === 'includeStandards') return config.includeStandards;
-    if (node.featureKey === 'includeJudge') return config.includeJudge;
+    if (node.featureKey === 'includeEmbeddings') return config.includeEmbeddings;
+    if (node.featureKey === 'includeAdvancedStats') return config.includeAdvancedStats;
 
     return true;
   });
@@ -237,7 +252,10 @@ export function getVisibleNodes(
 
 /**
  * Filter edges based on workflow configuration
- * Remove edges that connect to hidden nodes
+ * Removes edges that:
+ * 1. Connect to hidden nodes
+ * 2. Have conditional features that are disabled
+ * 3. Duplicate paths when optional modules are disabled
  */
 export function getVisibleEdges(
   edges: WorkflowEdge[],
@@ -252,11 +270,16 @@ export function getVisibleEdges(
       }
 
       // Handle conditional edges
-      if (edge.conditionalFeature === 'includeStandards') {
-        return config.includeStandards;
+      if (edge.conditionalFeature === 'includeEmbeddings') {
+        return config.includeEmbeddings;
       }
-      if (edge.conditionalFeature === 'includeJudge') {
-        return config.includeJudge;
+      if (edge.conditionalFeature === 'includeAdvancedStats') {
+        return config.includeAdvancedStats;
+      }
+
+      // For the direct path edge (2→4), hide it if embeddings are enabled
+      if (edge.id === 'edge-2-4-direct' && config.includeEmbeddings) {
+        return false;
       }
 
       return true;
@@ -271,7 +294,8 @@ export function getVisibleEdges(
 
 /**
  * Build the complete node sequence for workflow execution
- * Traverses edges to determine the order of node execution
+ * Traverses edges depth-first to determine the order of node execution
+ * Starts from Dataset Handler node (entry point)
  */
 export function buildExecutionSequence(
   nodes: WorkflowNode[],
@@ -281,17 +305,17 @@ export function buildExecutionSequence(
   const sequence: string[] = [];
   const visited = new Set<string>();
 
-  // Find the starting node (upload requirements)
-  const startNode = nodes.find((n) => n.id === 'node-1-upload-requirements');
+  // Find the starting node (Dataset Handler)
+  const startNode = nodes.find((n) => n.id === 'node-1-dataset-handler');
   if (!startNode) return [];
 
-  // Traverse the graph depth-first
+  // Traverse the graph depth-first to build execution sequence
   const traverse = (nodeId: string) => {
     if (visited.has(nodeId)) return;
     visited.add(nodeId);
     sequence.push(nodeId);
 
-    // Find all outgoing edges
+    // Find all outgoing edges from current node
     const outgoingEdges = edges.filter((e) => e.source === nodeId);
     for (const edge of outgoingEdges) {
       if (nodeMap.has(edge.target)) {
@@ -305,7 +329,8 @@ export function buildExecutionSequence(
 }
 
 /**
- * Initialize workflow with default configuration
+ * Initialize workflow with configuration
+ * Returns nodes, edges, and execution sequence based on feature toggles
  */
 export function initializeWorkflow(config: WorkflowConfig) {
   const visibleNodes = getVisibleNodes(DEFAULT_WORKFLOW_NODES, config);

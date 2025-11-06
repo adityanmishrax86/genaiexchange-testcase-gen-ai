@@ -1,11 +1,15 @@
 /**
- * App.tsx - Refactored Version
+ * App.tsx - LLM Evaluation Pipeline
  *
- * Healthcare AI Test Case Generator with integrated backend APIs.
- * Uses pre-built workflow with configurable optional features.
+ * 5-Stage Pipeline for LLM Evaluation with Langfuse Tracing:
+ * 1. Dataset Handler: CSV → Langfuse dataset (5x duplication) → JSONL
+ * 2. LLM Runner: JSONL → OpenAI batch → polling → results
+ * 3. Module Executor: Embeddings (optional) → semantic similarity
+ * 4. Results Aggregator: Statistics calculation → eval_run.score
+ * 5. Langfuse Logger: Evaluation tracing and logging
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   useNodesState,
@@ -23,42 +27,35 @@ import '@xyflow/react/dist/style.css';
 import { WorkflowProvider, useWorkflow } from './context/WorkflowContext';
 import WorkflowSettings from './components/WorkflowSettings';
 import {
-  UploadNodeComponent,
-  ExtractNodeComponent,
-  ReviewNodeComponent,
-  GenerateNodeComponent,
-  JudgeNodeComponent,
-  ApproveNodeComponent,
-  JiraPushNodeComponent,
+  DatasetHandlerNode,
+  LLMRunnerNode,
+  ModuleExecutorNode,
+  ResultsAggregatorNode,
+  LangfuseLoggerNode,
 } from './components/WorkflowNodes';
 import {
-  DEFAULT_WORKFLOW_NODES,
-  DEFAULT_WORKFLOW_EDGES,
   WorkflowConfig,
   initializeWorkflow,
 } from './config/workflowConfig';
 
-// Node type mappings
+// Node type mappings for the 5-stage pipeline
 const nodeTypes = {
-  upload: UploadNodeComponent,
-  extract: ExtractNodeComponent,
-  review: ReviewNodeComponent,
-  generate: GenerateNodeComponent,
-  judge: JudgeNodeComponent,
-  approve: ApproveNodeComponent,
-  jiraPush: JiraPushNodeComponent,
+  datasetHandler: DatasetHandlerNode,
+  llmRunner: LLMRunnerNode,
+  moduleExecutor: ModuleExecutorNode,
+  resultsAggregator: ResultsAggregatorNode,
+  langfuseLogger: LangfuseLoggerNode,
 };
 
 // ============ MAIN WORKFLOW COMPONENT ============
 function WorkflowCanvas() {
   const { state } = useWorkflow();
   const reactFlowWrapper = useRef(null);
-  const { screenToFlowPosition } = useReactFlow();
 
-  // Workflow configuration and initialization
+  // Workflow configuration for optional features
   const [workflowConfig, setWorkflowConfig] = useState<WorkflowConfig>({
-    includeStandards: false,
-    includeJudge: true,
+    includeEmbeddings: false,
+    includeAdvancedStats: false,
   });
   const [showSettings, setShowSettings] = useState(false);
 
@@ -68,12 +65,12 @@ function WorkflowCanvas() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialWorkflow.edges);
   const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'running' | 'completed'>('idle');
 
-  // Metrics tracking
+  // Metrics tracking for the pipeline
   const [metrics, setMetrics] = useState({
-    requirementsCount: 0,
-    testCasesCount: 0,
-    verdictCount: 0,
-    pushedCount: 0,
+    datasetRows: 0,
+    batchId: '',
+    avgScore: 0,
+    traceCount: 0,
   });
 
   // Update workflow when config changes
@@ -86,10 +83,10 @@ function WorkflowCanvas() {
   // Update metrics when workflow state changes
   useEffect(() => {
     setMetrics({
-      requirementsCount: state.requirements.length,
-      testCasesCount: state.testCases.length,
-      verdictCount: state.judgeVerdicts.length,
-      pushedCount: state.jiraResult?.created_issues_count || 0,
+      datasetRows: state.dataset?.duplicatedRowCount || 0,
+      batchId: state.batch?.batchId || '',
+      avgScore: state.aggregatedStats?.averageScore || 0,
+      traceCount: state.evaluationRun?.traceCount || 0,
     });
   }, [state]);
 
@@ -128,10 +125,10 @@ function WorkflowCanvas() {
     setEdges(newWorkflow.edges);
     setWorkflowStatus('idle');
     setMetrics({
-      requirementsCount: 0,
-      testCasesCount: 0,
-      verdictCount: 0,
-      pushedCount: 0,
+      datasetRows: 0,
+      batchId: '',
+      avgScore: 0,
+      traceCount: 0,
     });
   }, [workflowConfig, setNodes, setEdges]);
 
@@ -139,16 +136,16 @@ function WorkflowCanvas() {
   const runWorkflow = useCallback(async () => {
     setWorkflowStatus('running');
 
-    // Find the sequence of visible nodes from upload to JIRA
-    const uploadNode = nodes.find((n) => n.type === 'upload');
-    if (!uploadNode) {
-      alert('Upload node not found');
+    // Find the sequence of visible nodes from dataset handler onward
+    const datasetNode = nodes.find((n) => n.type === 'datasetHandler');
+    if (!datasetNode) {
+      alert('Dataset handler node not found');
       setWorkflowStatus('idle');
       return;
     }
 
-    let nodeSequence: string[] = [uploadNode.id];
-    let currentId = uploadNode.id;
+    let nodeSequence: string[] = [datasetNode.id];
+    let currentId = datasetNode.id;
 
     const findNextNode = (sourceId: string) => {
       const edge = edges.find((e) => e.source === sourceId);
@@ -185,23 +182,22 @@ function WorkflowCanvas() {
   return (
     <div className="w-full h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg p-4 z-10">
+      <div className="bg-gradient-to-r from-indigo-600 to-pink-600 text-white shadow-lg p-4 z-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Healthcare Test Case Generator</h1>
-            <p className="text-sm text-blue-100">AI-Powered Compliance Testing with FDA & IEC-62304</p>
+            <h1 className="text-2xl font-bold">Kaapi Konsole</h1>
+            <p className="text-sm text-indigo-100">5-Stage Dataset Processing with Langfuse Tracing</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm">Status:</span>
               <span
-                className={`text-sm font-bold px-3 py-1 rounded-full ${
-                  workflowStatus === 'idle'
-                    ? 'bg-gray-400'
-                    : workflowStatus === 'running'
-                      ? 'bg-yellow-400 animate-pulse'
-                      : 'bg-green-400'
-                }`}
+                className={`text-sm font-bold px-3 py-1 rounded-full ${workflowStatus === 'idle'
+                  ? 'bg-gray-400'
+                  : workflowStatus === 'running'
+                    ? 'bg-yellow-400 animate-pulse'
+                    : 'bg-green-400'
+                  }`}
               >
                 {workflowStatus.toUpperCase()}
               </span>
@@ -233,23 +229,23 @@ function WorkflowCanvas() {
       {/* Metrics Dashboard */}
       <div className="bg-white shadow p-4 border-b">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-lg font-semibold mb-3 text-gray-800">Workflow Metrics</h2>
+          <h2 className="text-lg font-semibold mb-3 text-gray-800">Pipeline Metrics</h2>
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div className="text-3xl font-bold text-blue-600">{metrics.requirementsCount}</div>
-              <div className="text-sm text-gray-600">Requirements Extracted</div>
+            <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <div className="text-3xl font-bold text-indigo-600">{metrics.datasetRows}</div>
+              <div className="text-sm text-gray-600">Dataset Rows (5x duplicated)</div>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <div className="text-3xl font-bold text-green-600">{metrics.testCasesCount}</div>
-              <div className="text-sm text-gray-600">Test Cases Generated</div>
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+              <div className="text-3xl font-bold text-amber-600">{metrics.batchId ? '✓' : '—'}</div>
+              <div className="text-sm text-gray-600">Batch Status</div>
             </div>
-            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-              <div className="text-3xl font-bold text-yellow-600">{metrics.verdictCount}</div>
-              <div className="text-sm text-gray-600">Quality Verdicts</div>
+            <div className="bg-violet-50 p-4 rounded-lg border border-violet-200">
+              <div className="text-3xl font-bold text-violet-600">{metrics.avgScore.toFixed(2)}</div>
+              <div className="text-sm text-gray-600">Average Score</div>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-              <div className="text-3xl font-bold text-purple-600">{metrics.pushedCount}</div>
-              <div className="text-sm text-gray-600">JIRA Issues Pushed</div>
+            <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
+              <div className="text-3xl font-bold text-pink-600">{metrics.traceCount}</div>
+              <div className="text-sm text-gray-600">Langfuse Traces</div>
             </div>
           </div>
         </div>
@@ -268,18 +264,16 @@ function WorkflowCanvas() {
           nodeTypes={nodeTypes}
           fitView
         >
-          <Background variant="dots" gap={12} size={1} />
+          <Background variant="dots" gap={12} size={1} color="#000000" />
           <Controls />
           <MiniMap
             nodeColor={(node) => {
               const colors = {
-                upload: '#3b82f6',
-                extract: '#10b981',
-                review: '#9333ea',
-                generate: '#10b981',
-                judge: '#eab308',
-                approve: '#9333ea',
-                jiraPush: '#ef4444',
+                datasetHandler: '#6366f1',
+                llmRunner: '#d97706',
+                moduleExecutor: '#14b8a6',
+                resultsAggregator: '#8b5cf6',
+                langfuseLogger: '#ec4899',
               };
               return colors[node.type] || '#6b7280';
             }}
@@ -287,15 +281,13 @@ function WorkflowCanvas() {
 
           {/* Help Panel */}
           <Panel position="top-left" className="bg-white p-4 rounded-lg shadow-lg max-w-xs">
-            <h3 className="font-bold mb-2 text-gray-800">Workflow Guide</h3>
+            <h3 className="font-bold mb-2 text-gray-800">5-Stage Pipeline</h3>
             <ol className="text-xs text-gray-600 space-y-1">
-              <li>1️⃣ Upload requirements document</li>
-              <li>2️⃣ Extract and structure requirements</li>
-              <li>3️⃣ Review and approve requirements</li>
-              <li>4️⃣ Generate test cases</li>
-              <li>5️⃣ Evaluate quality (optional)</li>
-              <li>6️⃣ Approve test cases</li>
-              <li>7️⃣ Push to JIRA</li>
+              <li>📊 <strong>Stage 1:</strong> Upload CSV → Langfuse dataset (5x)</li>
+              <li>⚙️ <strong>Stage 2:</strong> OpenAI batch creation & polling</li>
+              <li>📈 <strong>Stage 3:</strong> Embeddings & similarity (optional)</li>
+              <li>📊 <strong>Stage 4:</strong> Aggregate statistics</li>
+              <li>📝 <strong>Stage 5:</strong> Langfuse evaluation logging</li>
             </ol>
           </Panel>
         </ReactFlow>

@@ -1,22 +1,31 @@
 /**
- * WorkflowNodes.tsx
+ * WorkflowNodes.tsx - LLM Evaluation Pipeline Nodes
  *
- * Pre-built node components for the healthcare test workflow.
- * Each node calls real backend APIs and displays results.
+ * 5-Stage Pipeline Node Components:
+ * 1. DatasetHandlerNode: CSV upload → Langfuse dataset creation → JSONL building
+ * 2. LLMRunnerNode: JSONL upload → OpenAI batch creation → polling → results
+ * 3. ModuleExecutorNode: Embedding JSONL → semantic similarity calculation (optional)
+ * 4. ResultsAggregatorNode: Statistics aggregation → eval_run.score update
+ * 5. LangfuseLoggerNode: Evaluation tracing and logging
+ *
+ * Each node has a processing function that can be hooked up to backend APIs
  */
 
 import React, { useState, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { useWorkflowApi } from '../hooks/useWorkflowApi';
 import { useWorkflow } from '../context/WorkflowContext';
+import { fetchWithMock } from '../hooks/useMockApi';
 
-// ============ JSON RESPONSE VIEWER ============
+// ============ SHARED RESPONSE VIEWER ============
 const ResponseViewer = ({ data, title }: { data: any; title: string }) => {
   const [expanded, setExpanded] = useState(false);
   return (
     <details className="cursor-pointer mt-2">
-      <summary className="font-semibold text-blue-700 hover:text-blue-900">
-        {expanded ? '▼' : '▶'} {title} (Full Response)
+      <summary
+        className="font-semibold text-blue-700 hover:text-blue-900"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? '▼' : '▶'} {title}
       </summary>
       <div className="mt-2 ml-2 bg-gray-900 text-gray-100 p-3 rounded text-xs font-mono overflow-x-auto max-h-64 overflow-y-auto">
         <pre>{JSON.stringify(data, null, 2)}</pre>
@@ -25,851 +34,726 @@ const ResponseViewer = ({ data, title }: { data: any; title: string }) => {
   );
 };
 
-// ============ UPLOAD NODE ============
-export const UploadNodeComponent = ({ data, isConnectable }) => {
+// ============ STAGE 1: DATASET HANDLER NODE ============
+/**
+ * Step 1-3: Upload CSV → Create Langfuse Dataset (5x duplication) → Build JSONL for OpenAI
+ *
+ * Backend hook points:
+ * - POST /api/dataset/upload-csv: Upload CSV file
+ * - POST /api/dataset/create-langfuse: Create Langfuse dataset with duplication
+ * - POST /api/dataset/build-jsonl: Build JSONL for OpenAI batch
+ */
+export const DatasetHandlerNode = ({ data, isConnectable }: { data: any; isConnectable: boolean }) => {
+  const { state, setDataset, setCsvError, setCurrentStage } = useWorkflow();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { uploadFile, isLoading, error, clearError } = useWorkflowApi();
-  const { state, setDocId, setExtractionError } = useWorkflow();
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [responseData, setResponseData] = useState<any>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    clearError();
+    setCsvError(null);
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 50MB)
-    const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-      clearError();
-      setExtractionError('File size exceeds 50MB limit');
-      return;
-    }
+    setIsProcessing(true);
+    setCurrentStage('datasetHandler');
 
-    const result = await uploadFile(file);
-    if (result) {
-      setDocId(result.doc_id, result.filename);
-      setExtractionError(null);
-      setUploadProgress(100);
-      if (data.onProcessed) data.onProcessed({ doc_id: result.doc_id, filename: result.filename });
+    try {
+      // Step 1: Upload CSV to backend
+      const formData = new FormData();
+      formData.append('file', file);
 
-      // Reset progress after a short delay
-      setTimeout(() => setUploadProgress(0), 1000);
+      // This endpoint should handle all 3 steps:
+      // 1. Upload CSV file
+      // 2. Create Langfuse dataset (with 5x duplication)
+      // 3. Build JSONL for OpenAI batch
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || '/api'}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Dataset upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setResponseData(result);
+
+      // Update workflow state with dataset info
+      setDataset({
+        datasetId: result.dataset_id,
+        name: result.dataset_name,
+        rowCount: result.row_count,
+        duplicatedRowCount: result.duplicated_row_count,
+      });
+
+      if (data.onProcessed) {
+        data.onProcessed({
+          datasetId: result.dataset_id,
+          rowCount: result.row_count,
+          duplicatedRowCount: result.duplicated_row_count,
+        });
+      }
+    } catch (err: any) {
+      setCsvError(err.message || 'Dataset handler failed');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const getFileSize = (_filename: string): string => {
-    // This is a placeholder - actual file size would come from backend
-    return 'File ready for processing';
-  };
-
-  const hasFile = state.docId !== null && state.filename !== null;
+  const hasDataset = state.dataset !== null;
 
   return (
-    <div className={`bg-blue-50 border-2 ${hasFile ? 'border-green-400' : 'border-blue-300'} rounded-lg p-4 min-w-[300px] shadow-lg transition-all ${isLoading ? 'animate-pulse' : ''}`}>
-      <div className="font-bold text-blue-900 mb-2">📤 {data.name || 'Upload Requirements'}</div>
-      <div className="text-xs text-gray-600 mb-3">{data.label}</div>
+    <div
+      className={`bg-indigo-50 border-2 ${hasDataset ? 'border-green-400' : 'border-indigo-300'
+        } rounded-lg p-4 min-w-[320px] shadow-lg transition-all ${isProcessing ? 'animate-pulse' : ''
+        }`}
+    >
+      <div className="font-bold text-indigo-900 mb-2">📊 {data.name || 'Dataset Handler'}</div>
+      <div className="text-xs text-gray-600 mb-2">{data.label}</div>
+
+      {/* Substeps indicator */}
+      {data.substeps && (
+        <div className="text-xs text-gray-700 mb-3 space-y-1">
+          {data.substeps.map((substep: any) => (
+            <div key={substep.step} className="flex items-center gap-2">
+              <span className="text-gray-500">Step {substep.step}:</span>
+              <span>{substep.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.docx,.csv,.xlsx,.txt"
+        accept=".csv"
         onChange={handleFileSelect}
         className="hidden"
       />
 
-      {!hasFile ? (
-        <>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="w-full text-xs bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400 transition-colors font-semibold"
-          >
-            {isLoading ? `Uploading... ${uploadProgress}%` : '📁 Choose File to Upload'}
-          </button>
-          <div className="text-xs text-gray-500 mt-2 text-center">
-            Supports: PDF, DOCX, CSV, XLSX, TXT (Max 50MB)
-          </div>
-        </>
+      {!hasDataset ? (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isProcessing}
+          className="w-full text-xs bg-indigo-500 text-white p-2 rounded hover:bg-indigo-600 disabled:bg-gray-400 transition-colors font-semibold"
+        >
+          {isProcessing ? 'Processing...' : '📁 Upload CSV Dataset'}
+        </button>
       ) : (
-        <div className="space-y-2">
-          <div className="bg-green-100 border border-green-400 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">✓</span>
-              <span className="font-semibold text-green-900">File Uploaded Successfully</span>
-            </div>
-            <div className="text-xs text-green-800 ml-6 truncate" title={state.filename || ''}>
-              {state.filename}
-            </div>
-            <div className="text-xs text-green-700 ml-6 mt-1">
-              {getFileSize(state.filename || '')}
-            </div>
+        <div className="bg-green-100 border border-green-400 rounded p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">✓</span>
+            <span className="font-semibold text-green-900">Dataset Ready</span>
           </div>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="w-full text-xs bg-gray-400 text-white p-2 rounded hover:bg-gray-500 disabled:bg-gray-300 transition-colors"
-          >
-            {isLoading ? 'Uploading...' : 'Change File'}
-          </button>
+          <div className="text-xs text-green-800 ml-6">
+            <div>ID: {state.dataset.datasetId}</div>
+            <div>Original rows: {state.dataset.rowCount}</div>
+            <div>Duplicated rows: {state.dataset.duplicatedRowCount} (5x)</div>
+          </div>
         </div>
       )}
 
-      {error && (
+      {state.csvError && (
         <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border border-red-200">
-          ⚠️ {error}
+          ⚠️ {state.csvError}
         </div>
       )}
+
+      {responseData && <ResponseViewer data={responseData} title="Dataset Response" />}
 
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: hasFile ? '#22c55e' : '#3b82f6' }}
+        style={{ background: hasDataset ? '#22c55e' : '#6366f1' }}
         isConnectable={isConnectable}
       />
     </div>
   );
 };
 
-// ============ EXTRACT NODE ============
-export const ExtractNodeComponent = ({ data, isConnectable }) => {
-  const { extractRequirements, isLoading, error, clearError } = useWorkflowApi();
-  const { state, setRequirements, setExtractionError } = useWorkflow();
-  const [showDetails, setShowDetails] = useState(false);
-  const [extractionResponse, setExtractionResponse] = useState<any>(null);
+// ============ STAGE 2: LLM RUNNER NODE ============
+/**
+ * Step 4-10: Upload JSONL → Create OpenAI Batch → Poll → Download results
+ *
+ * Backend hook points:
+ * - POST /api/batch/upload-jsonl: Upload JSONL file to OpenAI Files API
+ * - POST /api/batch/create-batch: Create batch with OpenAI Batch API
+ * - GET /api/batch/{batch_id}/status: Poll batch status (used by Celery Beat)
+ * - GET /api/batch/{batch_id}/results: Download completed batch results
+ */
+export const LLMRunnerNode = ({ data, isConnectable }: { data: any; isConnectable: boolean }) => {
+  const { state, setBatch, setBatchPollingStatus, setBatchError, setCurrentStage } = useWorkflow();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [responseData, setResponseData] = useState<any>(null);
 
-  const handleExtract = async () => {
-    clearError();
-    if (!state.docId) {
-      setExtractionError('No document uploaded');
+  const startBatchProcessing = async () => {
+    if (!state.dataset) {
+      setBatchError('No dataset available. Complete dataset handler first.');
       return;
     }
 
-    const requirements = await extractRequirements(state.docId);
-    if (requirements) {
-      setRequirements(requirements);
-      // Store full response for display
-      setExtractionResponse({
-        created_requirements: requirements,
-        count: requirements.length,
-        timestamp: new Date().toISOString(),
+    setIsProcessing(true);
+    setBatchError(null);
+    setCurrentStage('llmRunner');
+    setBatchPollingStatus('polling');
+
+    try {
+      // Step 4-6: Upload JSONL and create batch
+      const response = await fetchWithMock(
+        `${import.meta.env.VITE_API_BASE || '/api'}/batch/create-batch`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dataset_id: state.dataset.datasetId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Batch creation failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setResponseData(result);
+
+      // Update batch info in state
+      setBatch({
+        batchId: result.batch_id,
+        status: result.status || 'queued',
+        inputFileId: result.input_file_id,
+        outputFileId: result.output_file_id || null,
+        createdAt: new Date().toISOString(),
+        completedAt: null,
       });
-      if (data.onProcessed) data.onProcessed({ requirement_count: requirements.length });
-    } else {
-      setExtractionError('Extraction failed');
+
+      if (data.onProcessed) {
+        data.onProcessed({
+          batchId: result.batch_id,
+          status: result.status,
+        });
+      }
+
+      // Step 7-9: Start polling batch status (would be handled by Celery Beat in production)
+      // Frontend can optionally poll for demo purposes
+      pollBatchStatus(result.batch_id);
+    } catch (err: any) {
+      setBatchError(err.message || 'LLM runner failed');
+      setBatchPollingStatus('failed');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const avgConfidence =
-    state.requirements.length > 0
-      ? (state.requirements.reduce((sum, r) => sum + r.overall_confidence, 0) / state.requirements.length * 100).toFixed(1)
-      : 0;
+  const pollBatchStatus = (batchId: string) => {
+    // In production, Celery Beat would handle this polling
+    // Frontend can optionally poll for demo/monitoring
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetchWithMock(
+          `${import.meta.env.VITE_API_BASE || '/api'}/batch/${batchId}/status`,
+          { method: 'GET' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to poll batch status');
+        }
+
+        const result = await response.json();
+
+        if (result.status === 'completed') {
+          setBatchPollingStatus('completed');
+          setBatch({
+            batchId,
+            status: 'completed',
+            inputFileId: state.batch?.inputFileId || '',
+            outputFileId: result.output_file_id,
+            createdAt: state.batch?.createdAt || '',
+            completedAt: new Date().toISOString(),
+          });
+          if (intervalId) clearInterval(intervalId);
+        } else if (result.status === 'failed') {
+          setBatchPollingStatus('failed');
+          setBatchError('Batch processing failed');
+          if (intervalId) clearInterval(intervalId);
+        }
+      } catch (err: any) {
+        console.error('Poll error:', err);
+      }
+    }, 5000); // Poll every 5 seconds for demo
+  };
+
+  const hasBatch = state.batch !== null;
+  const batchComplete = state.batchPollingStatus === 'completed';
 
   return (
-    <div className={`bg-green-50 border-2 border-green-300 rounded-lg p-4 min-w-[300px] shadow-lg ${isLoading ? 'animate-pulse' : ''}`}>
-      <div className="font-bold text-green-900 mb-2">🔍 {data.name || 'Extract Requirements'}</div>
-      <div className="text-xs text-gray-600 mb-3">{data.label}</div>
+    <div
+      className={`bg-amber-50 border-2 ${batchComplete ? 'border-green-400' : 'border-amber-300'
+        } rounded-lg p-4 min-w-[320px] shadow-lg transition-all ${isProcessing ? 'animate-pulse' : ''
+        }`}
+    >
+      <div className="font-bold text-amber-900 mb-2">⚙️ {data.name || 'LLM Runner'}</div>
+      <div className="text-xs text-gray-600 mb-2">{data.label}</div>
 
-      {!state.requirements.length ? (
+      {/* Substeps indicator */}
+      {data.substeps && (
+        <div className="text-xs text-gray-700 mb-3 space-y-1">
+          {data.substeps.map((substep: any) => (
+            <div key={substep.step} className="flex items-center gap-2">
+              <span className="text-gray-500">Step {substep.step}:</span>
+              <span>{substep.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!hasBatch ? (
         <button
-          onClick={handleExtract}
-          disabled={isLoading || !state.docId}
-          className="w-full text-xs bg-green-500 text-white p-2 rounded hover:bg-green-600 disabled:bg-gray-400 transition-colors"
+          onClick={startBatchProcessing}
+          disabled={isProcessing || !state.dataset}
+          className="w-full text-xs bg-amber-500 text-white p-2 rounded hover:bg-amber-600 disabled:bg-gray-400 transition-colors font-semibold"
         >
-          {isLoading ? 'Extracting...' : 'Extract Requirements'}
+          {isProcessing ? 'Creating batch...' : '🚀 Start OpenAI Batch'}
         </button>
       ) : (
-        <div className="space-y-2">
-          <div className="text-xs bg-green-100 p-2 rounded">
-            ✓ {state.requirements.length} requirements extracted
-          </div>
-          <div className="text-xs text-gray-700">
-            Average confidence: <span className="font-semibold">{avgConfidence}%</span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowDetails(!showDetails)}
-              className="text-xs text-blue-600 hover:underline"
-            >
-              {showDetails ? 'Hide' : 'Show'} Details
-            </button>
-          </div>
-
-          {extractionResponse && <ResponseViewer data={extractionResponse} title="Extraction Response" />}
-
-          {showDetails && (
-            <div className="max-h-96 overflow-y-auto bg-white border rounded p-3 text-xs space-y-3">
-              {state.requirements.map((req, idx) => (
-                <div key={req.id} className="border border-green-200 rounded p-2 bg-green-50">
-                  <div className="font-semibold text-green-900 mb-2">Requirement #{idx + 1} (ID: {req.id})</div>
-                  <div className="bg-white p-2 rounded mb-2 text-gray-700 whitespace-pre-wrap break-words">
-                    {req.raw_text}
-                  </div>
-                  <div className="space-y-1 text-gray-600">
-                    <div><span className="font-semibold">Overall Confidence:</span> {(req.overall_confidence * 100).toFixed(0)}%</div>
-                    {req.structured && Object.keys(req.structured).length > 0 && (
-                      <details className="cursor-pointer">
-                        <summary className="font-semibold text-green-700">Structured Data</summary>
-                        <div className="mt-2 ml-2 bg-gray-100 p-2 rounded text-xs font-mono whitespace-pre-wrap break-words">
-                          {JSON.stringify(req.structured, null, 2).substring(0, 300)}...
-                        </div>
-                      </details>
-                    )}
-                    {req.field_confidences && Object.keys(req.field_confidences).length > 0 && (
-                      <details className="cursor-pointer">
-                        <summary className="font-semibold text-green-700">Field Confidences</summary>
-                        <div className="mt-2 ml-2 space-y-1">
-                          {Object.entries(req.field_confidences).map(([field, conf]) => (
-                            <div key={field} className="flex justify-between text-xs">
-                              <span>{field}:</span>
-                              <span className="font-mono">{((conf as number) * 100).toFixed(0)}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && <div className="text-xs text-red-600 mt-2">⚠️ {error}</div>}
-
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ background: '#10b981' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ background: '#10b981' }}
-        isConnectable={isConnectable}
-      />
-    </div>
-  );
-};
-
-// ============ REVIEW NODE ============
-export const ReviewNodeComponent = ({ data, isConnectable }) => {
-  const { approveRequirement, isLoading } = useWorkflowApi();
-  const { state, approveRequirement: contextApprove } = useWorkflow();
-  const [approving, setApproving] = useState<number | null>(null);
-  const [showReviewResponse, setShowReviewResponse] = useState(false);
-
-  const handleApproveReq = async (reqId: number) => {
-    setApproving(reqId);
-    const success = await approveRequirement(reqId);
-    if (success) {
-      contextApprove(reqId);
-    }
-    setApproving(null);
-  };
-
-  const approvedCount = state.approvedRequirementIds.size;
-  const totalCount = state.requirements.length;
-  const allApproved = totalCount > 0 && approvedCount === totalCount;
-
-  return (
-    <div className={`bg-purple-50 border-2 border-purple-300 rounded-lg p-4 min-w-[320px] shadow-lg ${isLoading ? 'animate-pulse' : ''}`}>
-      <div className="font-bold text-purple-900 mb-2">👤 {data.name || 'Review Requirements'}</div>
-      <div className="text-xs text-gray-600 mb-3">{data.label}</div>
-
-      {state.requirements.length === 0 ? (
-        <div className="text-xs text-gray-500">No requirements to review</div>
-      ) : (
-        <div className="space-y-2">
-          <div className="text-xs bg-purple-100 p-2 rounded">
-            {approvedCount}/{totalCount} approved {allApproved && '✓'}
-          </div>
-
-          <button
-            onClick={() => setShowReviewResponse(!showReviewResponse)}
-            className="text-xs text-blue-600 hover:underline"
-          >
-            {showReviewResponse ? 'Hide' : 'Show'} Approved Summary
-          </button>
-
-          {showReviewResponse && (
-            <ResponseViewer
-              data={{
-                approved_count: approvedCount,
-                total_count: totalCount,
-                approved_requirement_ids: Array.from(state.approvedRequirementIds),
-                timestamp: new Date().toISOString(),
-              }}
-              title="Review Summary"
-            />
-          )}
-
-          <div className="max-h-48 overflow-y-auto space-y-1">
-            {state.requirements.map((req) => (
-              <div
-                key={req.id}
-                className={`text-xs p-2 rounded border flex justify-between items-center ${state.approvedRequirementIds.has(req.id) ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'
-                  }`}
-              >
-                <div className="flex-1 truncate">
-                  <div className="font-semibold truncate">{req.raw_text.substring(0, 40)}...</div>
-                  <div className="text-gray-500">ID: {req.id}</div>
-                </div>
-                <button
-                  onClick={() => handleApproveReq(req.id)}
-                  disabled={approving === req.id || state.approvedRequirementIds.has(req.id)}
-                  className={`ml-2 px-2 py-1 rounded text-xs whitespace-nowrap ${state.approvedRequirementIds.has(req.id)
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-300 hover:bg-gray-400'
-                    } disabled:opacity-50`}
-                >
-                  {approving === req.id ? '...' : state.approvedRequirementIds.has(req.id) ? '✓ OK' : 'Approve'}
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {allApproved && <div className="text-xs text-green-600 font-semibold">✓ Ready to generate test cases</div>}
-        </div>
-      )}
-
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ background: '#9333ea' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ background: '#9333ea' }}
-        isConnectable={isConnectable}
-      />
-    </div>
-  );
-};
-
-// ============ GENERATE NODE ============
-export const GenerateNodeComponent = ({ data, isConnectable }) => {
-  const { generateTestCases, isLoading, error, clearError } = useWorkflowApi();
-  const { state, setTestCases, setGenerationError } = useWorkflow();
-  const [showDetails, setShowDetails] = useState(false);
-  const [generationResponse, setGenerationResponse] = useState<any>(null);
-
-  const handleGenerate = async () => {
-    clearError();
-    if (!state.docId) {
-      setGenerationError('❌ No document uploaded. Go to Upload Requirements node first.');
-      return;
-    }
-    if (state.requirements.length === 0) {
-      setGenerationError('❌ No requirements extracted. Run Extract Requirements first.');
-      return;
-    }
-    if (state.approvedRequirementIds.size === 0) {
-      setGenerationError('❌ No requirements approved. Approve requirements in Review Requirements node first.');
-      return;
-    }
-
-    const testCases = await generateTestCases(state.docId, ['positive', 'negative', 'boundary']);
-    if (testCases && testCases.length > 0) {
-      setTestCases(testCases);
-      // Store full response for display
-      setGenerationResponse({
-        test_cases: testCases,
-        count: testCases.length,
-        types: [...new Set(testCases.map(tc => tc.test_type))],
-        timestamp: new Date().toISOString(),
-      });
-      if (data.onProcessed) data.onProcessed({ test_case_count: testCases.length });
-    } else if (testCases && testCases.length === 0) {
-      setGenerationError('⚠️ No test cases generated. Backend may not have created any cases. Check backend logs.');
-    } else {
-      setGenerationError('❌ Generation failed. Check browser console and backend logs for details.');
-    }
-  };
-
-  return (
-    <div className={`bg-green-50 border-2 border-green-300 rounded-lg p-4 min-w-[320px] shadow-lg ${isLoading ? 'animate-pulse' : ''}`}>
-      <div className="font-bold text-green-900 mb-2">🤖 {data.name || 'Generate Test Cases'}</div>
-      <div className="text-xs text-gray-600 mb-3">{data.label}</div>
-
-      {!state.testCases.length ? (
-        <>
-          <button
-            onClick={handleGenerate}
-            disabled={isLoading || state.approvedRequirementIds.size === 0}
-            className="w-full text-xs bg-green-500 text-white p-2 rounded hover:bg-green-600 disabled:bg-gray-400 transition-colors"
-            title={state.approvedRequirementIds.size === 0 ? 'Approve requirements in Review node first' : ''}
-          >
-            {isLoading ? 'Generating...' : 'Generate Test Cases'}
-          </button>
-          {state.approvedRequirementIds.size === 0 && (
-            <div className="text-xs text-orange-600 mt-2 p-2 bg-orange-50 rounded border border-orange-200">
-              ⚠️ <strong>Action Required:</strong> Approve requirements in the Review Requirements node first
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="space-y-2">
-          <div className="text-xs bg-green-100 p-2 rounded">
-            ✓ {state.testCases.length} test cases generated
-          </div>
-          <div className="text-xs text-gray-700">
-            Types: {new Set(state.testCases.map((tc) => tc.test_type)).size} types
-          </div>
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="text-xs text-blue-600 hover:underline"
-          >
-            {showDetails ? 'Hide' : 'Show'} Details
-          </button>
-
-          {generationResponse && <ResponseViewer data={generationResponse} title="Generation Response" />}
-
-          {showDetails && (
-            <div className="max-h-96 overflow-y-auto bg-white border rounded p-3 text-xs space-y-3">
-              {state.testCases.map((tc, idx) => (
-                <div key={tc.id} className="border border-green-200 rounded p-2 bg-green-50">
-                  <div className="font-semibold text-green-900 mb-2">Test Case #{idx + 1} - {tc.test_case_id}</div>
-                  <div className="space-y-2 text-gray-700">
-                    <div>
-                      <span className="font-semibold">Type:</span> <span className="bg-blue-100 px-2 py-1 rounded text-xs">{tc.test_type}</span>
-                    </div>
-
-                    <details className="cursor-pointer">
-                      <summary className="font-semibold text-green-700">Gherkin Scenario</summary>
-                      <div className="mt-2 ml-2 bg-gray-100 p-2 rounded whitespace-pre-wrap break-words font-mono text-xs">
-                        {tc.gherkin || 'N/A'}
-                      </div>
-                    </details>
-
-                    {tc.evidence_json && (
-                      <details className="cursor-pointer">
-                        <summary className="font-semibold text-green-700">Evidence</summary>
-                        <div className="mt-2 ml-2 bg-gray-100 p-2 rounded whitespace-pre-wrap break-words font-mono text-xs">
-                          {tc.evidence_json}
-                        </div>
-                      </details>
-                    )}
-
-                    {tc.automated_steps_json && (
-                      <details className="cursor-pointer">
-                        <summary className="font-semibold text-green-700">Automated Steps</summary>
-                        <div className="mt-2 ml-2 bg-gray-100 p-2 rounded whitespace-pre-wrap break-words font-mono text-xs">
-                          {tc.automated_steps_json}
-                        </div>
-                      </details>
-                    )}
-
-                    {tc.sample_data_json && (
-                      <details className="cursor-pointer">
-                        <summary className="font-semibold text-green-700">Sample Data</summary>
-                        <div className="mt-2 ml-2 bg-gray-100 p-2 rounded whitespace-pre-wrap break-words font-mono text-xs">
-                          {tc.sample_data_json}
-                        </div>
-                      </details>
-                    )}
-
-                    {tc.code_scaffold_str && (
-                      <details className="cursor-pointer">
-                        <summary className="font-semibold text-green-700">Code Scaffold</summary>
-                        <div className="mt-2 ml-2 bg-gray-100 p-2 rounded whitespace-pre-wrap break-words font-mono text-xs">
-                          {tc.code_scaffold_str}
-                        </div>
-                      </details>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && <div className="text-xs text-red-600 mt-2">⚠️ {error}</div>}
-
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ background: '#10b981' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ background: '#10b981' }}
-        isConnectable={isConnectable}
-      />
-    </div>
-  );
-};
-
-// ============ JUDGE NODE ============
-export const JudgeNodeComponent = ({ data, isConnectable }) => {
-  const { judgeTestCases, isLoading, error, clearError } = useWorkflowApi();
-  const { state, setJudgeVerdicts, setJudgeError } = useWorkflow();
-  const [showDetails, setShowDetails] = useState(false);
-  const [judgeResponse, setJudgeResponse] = useState<any>(null);
-
-  const handleJudge = async () => {
-    clearError();
-    if (state.testCases.length === 0) {
-      setJudgeError('No test cases to judge');
-      return;
-    }
-
-    const verdicts = await judgeTestCases(state.testCases.map((tc) => tc.id));
-    if (verdicts) {
-      setJudgeVerdicts(verdicts);
-      const avgScore = (verdicts.reduce((sum, v) => sum + v.total_rating, 0) / verdicts.length).toFixed(1);
-      // Store full response for display
-      setJudgeResponse({
-        verdicts: verdicts,
-        count: verdicts.length,
-        average_score: avgScore,
-        timestamp: new Date().toISOString(),
-      });
-      if (data.onProcessed) data.onProcessed({ avg_score: avgScore, verdict_count: verdicts.length });
-    } else {
-      setJudgeError('Judge evaluation failed');
-    }
-  };
-
-  const avgScore =
-    state.judgeVerdicts.length > 0
-      ? (state.judgeVerdicts.reduce((sum, v) => sum + v.total_rating, 0) / state.judgeVerdicts.length).toFixed(1)
-      : 0;
-
-  return (
-    <div className={`bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 min-w-[320px] shadow-lg ${isLoading ? 'animate-pulse' : ''}`}>
-      <div className="font-bold text-yellow-900 mb-2">⚖️ {data.name || 'Judge Quality'}</div>
-      <div className="text-xs text-gray-600 mb-3">{data.label || 'AI-powered quality evaluation'}</div>
-
-      {!state.judgeVerdicts.length ? (
-        <button
-          onClick={handleJudge}
-          disabled={isLoading || state.testCases.length === 0}
-          className="w-full text-xs bg-yellow-500 text-white p-2 rounded hover:bg-yellow-600 disabled:bg-gray-400 transition-colors"
+        <div
+          className={`${batchComplete ? 'bg-green-100 border-green-400' : 'bg-yellow-100 border-yellow-400'
+            } border rounded p-3 space-y-2`}
         >
-          {isLoading ? 'Evaluating...' : 'Evaluate Quality'}
+          <div className="flex items-center gap-2">
+            <span className={batchComplete ? 'text-lg' : 'animate-spin'}>
+              {batchComplete ? '✓' : '⏳'}
+            </span>
+            <span className={`font-semibold ${batchComplete ? 'text-green-900' : 'text-yellow-900'}`}>
+              {batchComplete ? 'Batch Complete' : 'Batch Processing'}
+            </span>
+          </div>
+          <div className={`text-xs ${batchComplete ? 'text-green-800' : 'text-yellow-800'} ml-6`}>
+            <div>Batch ID: {state.batch.batchId}</div>
+            <div>Status: {state.batchPollingStatus.toUpperCase()}</div>
+            {state.batch.completedAt && <div>Completed: {state.batch.completedAt}</div>}
+          </div>
+        </div>
+      )}
+
+      {state.batchError && (
+        <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border border-red-200">
+          ⚠️ {state.batchError}
+        </div>
+      )}
+
+      {responseData && <ResponseViewer data={responseData} title="Batch Response" />}
+
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={isConnectable}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: batchComplete ? '#22c55e' : '#d97706' }}
+        isConnectable={isConnectable}
+      />
+    </div>
+  );
+};
+
+// ============ STAGE 3: MODULE EXECUTOR NODE (Optional) ============
+/**
+ * Step 11-15: Build embedding JSONL → OpenAI Embeddings → Calculate cosine similarity
+ *
+ * Backend hook points:
+ * - POST /api/embeddings/build-jsonl: Build JSONL for embeddings
+ * - POST /api/embeddings/upload: Upload to OpenAI Embeddings API
+ * - GET /api/embeddings/{embedding_id}/status: Poll completion
+ * - POST /api/embeddings/calculate-similarity: Calculate cosine similarity
+ */
+export const ModuleExecutorNode = ({ data, isConnectable }: { data: any; isConnectable: boolean }) => {
+  const { state, setEmbeddings, setEmbeddingsError, setCurrentStage } = useWorkflow();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [responseData, setResponseData] = useState<any>(null);
+
+  const runEmbeddings = async () => {
+    if (!state.batch) {
+      setEmbeddingsError('No batch available. Complete LLM runner first.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setEmbeddingsError(null);
+    setCurrentStage('moduleExecutor');
+
+    try {
+      // Step 11-15: Run embeddings and calculate similarity
+      const response = await fetchWithMock(
+        `${import.meta.env.VITE_API_BASE || '/api'}/embeddings/process-batch`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            batch_id: state.batch.batchId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Embeddings processing failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setResponseData(result);
+
+      // Update embeddings in state
+      setEmbeddings(result.embeddings || []);
+
+      if (data.onProcessed) {
+        data.onProcessed({
+          embeddingCount: result.embeddings?.length || 0,
+          avgSimilarity: result.avg_similarity,
+        });
+      }
+    } catch (err: any) {
+      setEmbeddingsError(err.message || 'Module executor failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const hasEmbeddings = state.embeddings.length > 0;
+
+  return (
+    <div
+      className={`bg-teal-50 border-2 ${hasEmbeddings ? 'border-green-400' : 'border-teal-300'
+        } rounded-lg p-4 min-w-[320px] shadow-lg transition-all ${isProcessing ? 'animate-pulse' : ''
+        }`}
+    >
+      <div className="font-bold text-teal-900 mb-2">📈 {data.name || 'Embedding Module'}</div>
+      <div className="text-xs text-gray-600 mb-2">{data.label}</div>
+
+      {/* Substeps indicator */}
+      {data.substeps && (
+        <div className="text-xs text-gray-700 mb-3 space-y-1">
+          {data.substeps.map((substep: any) => (
+            <div key={substep.step} className="flex items-center gap-2">
+              <span className="text-gray-500">Step {substep.step}:</span>
+              <span>{substep.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!hasEmbeddings ? (
+        <button
+          onClick={runEmbeddings}
+          disabled={isProcessing || !state.batch}
+          className="w-full text-xs bg-teal-500 text-white p-2 rounded hover:bg-teal-600 disabled:bg-gray-400 transition-colors font-semibold"
+        >
+          {isProcessing ? 'Computing embeddings...' : '🔬 Run Embeddings'}
         </button>
       ) : (
-        <div className="space-y-2">
-          <div className="text-xs bg-yellow-100 p-2 rounded">
-            ✓ Average Score: <span className="font-semibold">{avgScore}/4</span>
+        <div className="bg-green-100 border border-green-400 rounded p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">✓</span>
+            <span className="font-semibold text-green-900">Embeddings Complete</span>
           </div>
-          <div className="text-xs text-gray-700">{state.judgeVerdicts.length} verdicts generated</div>
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="text-xs text-blue-600 hover:underline"
-          >
-            {showDetails ? 'Hide' : 'Show'} Details
-          </button>
+          <div className="text-xs text-green-800 ml-6">
+            <div>Embeddings: {state.embeddings.length}</div>
+            <div>Avg similarity: {state.embeddings[0]?.cosineSimilarity?.toFixed(4) || 'N/A'}</div>
+          </div>
+        </div>
+      )}
 
-          {judgeResponse && <ResponseViewer data={judgeResponse} title="Judge Response" />}
+      {state.embeddingsError && (
+        <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border border-red-200">
+          ⚠️ {state.embeddingsError}
+        </div>
+      )}
 
-          {showDetails && (
-            <div className="max-h-96 overflow-y-auto bg-white border rounded p-3 text-xs space-y-3">
-              {state.judgeVerdicts.map((v, idx) => (
-                <div key={v.test_case_id} className="border border-yellow-200 rounded p-2 bg-yellow-50">
-                  <div className="font-semibold text-yellow-900 mb-2">Verdict #{idx + 1} - Test Case #{v.test_case_id}</div>
-                  <div className="space-y-2 text-gray-700">
-                    <div className="flex items-center justify-between bg-yellow-100 p-2 rounded">
-                      <span className="font-semibold">Overall Rating:</span>
-                      <span className="text-lg font-bold text-yellow-700">{v.total_rating}/4</span>
-                    </div>
+      {responseData && <ResponseViewer data={responseData} title="Embeddings Response" />}
 
-                    <div className="grid grid-cols-2 gap-2">
-                      {v.correctness_of_trigger !== undefined && (
-                        <div className="bg-gray-100 p-2 rounded">
-                          <div className="font-semibold text-xs text-gray-700">Correctness of Trigger</div>
-                          <div className="text-lg font-bold text-gray-900">{v.correctness_of_trigger}/4</div>
-                        </div>
-                      )}
-                      {v.timing_and_latency !== undefined && (
-                        <div className="bg-gray-100 p-2 rounded">
-                          <div className="font-semibold text-xs text-gray-700">Timing & Latency</div>
-                          <div className="text-lg font-bold text-gray-900">{v.timing_and_latency}/4</div>
-                        </div>
-                      )}
-                      {v.actions_and_priority !== undefined && (
-                        <div className="bg-gray-100 p-2 rounded">
-                          <div className="font-semibold text-xs text-gray-700">Actions & Priority</div>
-                          <div className="text-lg font-bold text-gray-900">{v.actions_and_priority}/4</div>
-                        </div>
-                      )}
-                      {v.logging_and_traceability !== undefined && (
-                        <div className="bg-gray-100 p-2 rounded">
-                          <div className="font-semibold text-xs text-gray-700">Logging & Traceability</div>
-                          <div className="text-lg font-bold text-gray-900">{v.logging_and_traceability}/4</div>
-                        </div>
-                      )}
-                      {v.standards_citations !== undefined && (
-                        <div className="bg-gray-100 p-2 rounded">
-                          <div className="font-semibold text-xs text-gray-700">Standards Citations</div>
-                          <div className="text-lg font-bold text-gray-900">{v.standards_citations}/4</div>
-                        </div>
-                      )}
-                      {v.boundary_readiness !== undefined && (
-                        <div className="bg-gray-100 p-2 rounded">
-                          <div className="font-semibold text-xs text-gray-700">Boundary Readiness</div>
-                          <div className="text-lg font-bold text-gray-900">{v.boundary_readiness}/4</div>
-                        </div>
-                      )}
-                      {v.consistency_and_no_hallucination !== undefined && (
-                        <div className="bg-gray-100 p-2 rounded">
-                          <div className="font-semibold text-xs text-gray-700">Consistency & Hallucination</div>
-                          <div className="text-lg font-bold text-gray-900">{v.consistency_and_no_hallucination}/4</div>
-                        </div>
-                      )}
-                      {v.confidence !== undefined && (
-                        <div className="bg-gray-100 p-2 rounded">
-                          <div className="font-semibold text-xs text-gray-700">Confidence</div>
-                          <div className="text-lg font-bold text-gray-900">{(v.confidence * 100).toFixed(0)}%</div>
-                        </div>
-                      )}
-                    </div>
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={isConnectable}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: hasEmbeddings ? '#22c55e' : '#14b8a6' }}
+        isConnectable={isConnectable}
+      />
+    </div>
+  );
+};
 
-                    {v.feedback && (
-                      <details className="cursor-pointer">
-                        <summary className="font-semibold text-yellow-700">Feedback & Evaluation</summary>
-                        <div className="mt-2 ml-2 bg-gray-100 p-2 rounded whitespace-pre-wrap break-words">
-                          {v.feedback}
-                        </div>
-                      </details>
-                    )}
-                  </div>
-                </div>
-              ))}
+// ============ STAGE 4: RESULTS AGGREGATOR NODE ============
+/**
+ * Step 16: Calculate aggregate statistics → Update eval_run.score
+ *
+ * Backend hook points:
+ * - POST /api/results/aggregate: Calculate stats and update eval_run
+ */
+export const ResultsAggregatorNode = ({ data, isConnectable }: { data: any; isConnectable: boolean }) => {
+  const { state, setAggregatedStats, setAggregationError, setCurrentStage } = useWorkflow();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [responseData, setResponseData] = useState<any>(null);
+
+  const aggregateResults = async () => {
+    if (!state.batch) {
+      setAggregationError('No batch available. Complete LLM runner first.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setAggregationError(null);
+    setCurrentStage('resultsAggregator');
+
+    try {
+      // Step 16: Aggregate results
+      const response = await fetchWithMock(
+        `${import.meta.env.VITE_API_BASE || '/api'}/results/aggregate`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            batch_id: state.batch.batchId,
+            include_embeddings: state.embeddings.length > 0,
+            eval_run_id: state.evaluationRun?.evalRunId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Results aggregation failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setResponseData(result);
+
+      // Update aggregated stats in state
+      setAggregatedStats({
+        averageScore: result.average_score,
+        minScore: result.min_score,
+        maxScore: result.max_score,
+        stdDeviation: result.std_deviation,
+        passCount: result.pass_count,
+        failCount: result.fail_count,
+      });
+
+      if (data.onProcessed) {
+        data.onProcessed({
+          averageScore: result.average_score,
+          passCount: result.pass_count,
+          failCount: result.fail_count,
+        });
+      }
+    } catch (err: any) {
+      setAggregationError(err.message || 'Results aggregation failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const hasStats = state.aggregatedStats !== null;
+
+  return (
+    <div
+      className={`bg-violet-50 border-2 ${hasStats ? 'border-green-400' : 'border-violet-300'
+        } rounded-lg p-4 min-w-[320px] shadow-lg transition-all ${isProcessing ? 'animate-pulse' : ''
+        }`}
+    >
+      <div className="font-bold text-violet-900 mb-2">📊 {data.name || 'Results Aggregator'}</div>
+      <div className="text-xs text-gray-600 mb-2">{data.label}</div>
+
+      {/* Substeps indicator */}
+      {data.substeps && (
+        <div className="text-xs text-gray-700 mb-3 space-y-1">
+          {data.substeps.map((substep: any) => (
+            <div key={substep.step} className="flex items-center gap-2">
+              <span className="text-gray-500">Step {substep.step}:</span>
+              <span>{substep.name}</span>
             </div>
-          )}
+          ))}
         </div>
       )}
 
-      {error && <div className="text-xs text-red-600 mt-2">⚠️ {error}</div>}
+      {!hasStats ? (
+        <button
+          onClick={aggregateResults}
+          disabled={isProcessing || !state.batch}
+          className="w-full text-xs bg-violet-500 text-white p-2 rounded hover:bg-violet-600 disabled:bg-gray-400 transition-colors font-semibold"
+        >
+          {isProcessing ? 'Aggregating...' : '📈 Aggregate Results'}
+        </button>
+      ) : (
+        <div className="bg-green-100 border border-green-400 rounded p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">✓</span>
+            <span className="font-semibold text-green-900">Stats Ready</span>
+          </div>
+          <div className="text-xs text-green-800 ml-6 space-y-1">
+            <div>Average: {state.aggregatedStats.averageScore.toFixed(2)}</div>
+            <div>Min: {state.aggregatedStats.minScore.toFixed(2)}</div>
+            <div>Max: {state.aggregatedStats.maxScore.toFixed(2)}</div>
+            <div>Std Dev: {state.aggregatedStats.stdDeviation.toFixed(2)}</div>
+            <div>Pass: {state.aggregatedStats.passCount} | Fail: {state.aggregatedStats.failCount}</div>
+          </div>
+        </div>
+      )}
+
+      {state.aggregationError && (
+        <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border border-red-200">
+          ⚠️ {state.aggregationError}
+        </div>
+      )}
+
+      {responseData && <ResponseViewer data={responseData} title="Aggregation Response" />}
 
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: '#eab308' }}
         isConnectable={isConnectable}
       />
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: '#eab308' }}
+        style={{ background: hasStats ? '#22c55e' : '#8b5cf6' }}
         isConnectable={isConnectable}
       />
     </div>
   );
 };
 
-// ============ APPROVE NODE ============
-export const ApproveNodeComponent = ({ data, isConnectable }) => {
-  const { state, selectTestCase, deselectTestCase } = useWorkflow();
-  const [showApproveResponse, setShowApproveResponse] = useState(false);
+// ============ STAGE 5: LANGFUSE LOGGER NODE ============
+/**
+ * Step 2, 10, 16: Create EvaluationRun → Create traces → Update traces with scores
+ *
+ * Backend hook points:
+ * - POST /api/langfuse/create-evaluation-run: Create EvaluationRun (Step 2)
+ * - POST /api/langfuse/create-traces: Create traces for each QnA (Step 10)
+ * - PATCH /api/langfuse/update-traces: Update traces with scores (Step 16)
+ */
+export const LangfuseLoggerNode = ({ data, isConnectable }: { data: any; isConnectable: boolean }) => {
+  const { state, setEvaluationRun, setLangfuseError, setCurrentStage } = useWorkflow();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [responseData, setResponseData] = useState<any>(null);
 
-  const handleToggle = (testCaseId: number) => {
-    if (state.selectedTestCaseIds.has(testCaseId)) {
-      deselectTestCase(testCaseId);
-    } else {
-      selectTestCase(testCaseId);
+  const createEvaluationRun = async () => {
+    if (!state.dataset) {
+      setLangfuseError('No dataset available. Complete dataset handler first.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setLangfuseError(null);
+    setCurrentStage('langfuseLogger');
+
+    try {
+      // Steps 2, 10, 16 are handled by backend
+      // Frontend initiates the process here
+      const response = await fetchWithMock(
+        `${import.meta.env.VITE_API_BASE || '/api'}/langfuse/create-evaluation-run`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dataset_id: state.dataset.datasetId,
+            batch_id: state.batch?.batchId,
+            aggregated_stats: state.aggregatedStats,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Langfuse evaluation run creation failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setResponseData(result);
+
+      // Update evaluation run in state
+      setEvaluationRun({
+        evalRunId: result.eval_run_id,
+        name: result.eval_run_name,
+        createdAt: result.created_at,
+        traceCount: result.trace_count,
+        score: result.score || null,
+      });
+
+      if (data.onProcessed) {
+        data.onProcessed({
+          evalRunId: result.eval_run_id,
+          traceCount: result.trace_count,
+          score: result.score,
+        });
+      }
+    } catch (err: any) {
+      setLangfuseError(err.message || 'Langfuse logging failed');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const selectedCount = state.selectedTestCaseIds.size;
-  const totalCount = state.testCases.length;
+  const hasEvalRun = state.evaluationRun !== null;
 
   return (
-    <div className={`bg-purple-50 border-2 border-purple-300 rounded-lg p-4 min-w-[320px] shadow-lg`}>
-      <div className="font-bold text-purple-900 mb-2">✅ {data.name || 'Approve Test Cases'}</div>
-      <div className="text-xs text-gray-600 mb-3">{data.label || 'Select cases to push'}</div>
+    <div
+      className={`bg-pink-50 border-2 ${hasEvalRun ? 'border-green-400' : 'border-pink-300'
+        } rounded-lg p-4 min-w-[320px] shadow-lg transition-all ${isProcessing ? 'animate-pulse' : ''
+        }`}
+    >
+      <div className="font-bold text-pink-900 mb-2">📝 {data.name || 'Langfuse Logger'}</div>
+      <div className="text-xs text-gray-600 mb-2">{data.label}</div>
 
-      {state.testCases.length === 0 ? (
-        <div className="text-xs text-gray-500">No test cases to approve</div>
-      ) : (
-        <div className="space-y-2">
-          <div className="text-xs bg-purple-100 p-2 rounded">
-            {selectedCount}/{totalCount} selected
-          </div>
-
-          <button
-            onClick={() => setShowApproveResponse(!showApproveResponse)}
-            className="text-xs text-blue-600 hover:underline"
-          >
-            {showApproveResponse ? 'Hide' : 'Show'} Selection Summary
-          </button>
-
-          {showApproveResponse && (
-            <ResponseViewer
-              data={{
-                selected_count: selectedCount,
-                total_count: totalCount,
-                selected_test_case_ids: Array.from(state.selectedTestCaseIds),
-                timestamp: new Date().toISOString(),
-              }}
-              title="Approval Summary"
-            />
-          )}
-
-          <div className="max-h-48 overflow-y-auto space-y-1">
-            {state.testCases.map((tc) => (
-              <div
-                key={tc.id}
-                className={`text-xs p-2 rounded border flex items-center gap-2 ${state.selectedTestCaseIds.has(tc.id) ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'
-                  }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={state.selectedTestCaseIds.has(tc.id)}
-                  onChange={() => handleToggle(tc.id)}
-                  className="w-3 h-3"
-                />
-                <div className="flex-1 truncate">
-                  <div className="font-semibold truncate">{tc.test_case_id}</div>
-                  <div className="text-gray-500 text-xs">{tc.test_type}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {selectedCount > 0 && (
-            <div className="text-xs text-green-600 font-semibold">✓ Ready to push {selectedCount} cases</div>
-          )}
+      {/* Substeps indicator */}
+      {data.substeps && (
+        <div className="text-xs text-gray-700 mb-3 space-y-1">
+          {data.substeps.map((substep: any) => (
+            <div key={`${substep.step}-${substep.name}`} className="flex items-center gap-2">
+              <span className="text-gray-500">Step {substep.step}:</span>
+              <span>{substep.name}</span>
+            </div>
+          ))}
         </div>
       )}
 
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ background: '#9333ea' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ background: '#9333ea' }}
-        isConnectable={isConnectable}
-      />
-    </div>
-  );
-};
-
-// ============ JIRA PUSH NODE ============
-export const JiraPushNodeComponent = ({ data, isConnectable }) => {
-  const { pushToJira, isLoading, error, clearError } = useWorkflowApi();
-  const { state, setJiraResult, setJiraError } = useWorkflow();
-  const [jiraConfig, setJiraConfig] = useState({
-    url: 'https://jira.example.com',
-    project_key: 'TEST',
-    api_token: '',
-    username: '',
-  });
-  const [showConfig, setShowConfig] = useState(false);
-
-  const handlePush = async () => {
-    clearError();
-    if (state.selectedTestCaseIds.size === 0) {
-      setJiraError('No test cases selected');
-      return;
-    }
-    if (!jiraConfig.api_token || !jiraConfig.username) {
-      setJiraError('JIRA credentials required');
-      return;
-    }
-
-    const selectedIds = Array.from(state.selectedTestCaseIds);
-    const result = await pushToJira(jiraConfig, selectedIds);
-    if (result) {
-      setJiraResult({ created_issues_count: result.created_issues_count, issue_keys: result.issue_keys });
-      if (data.onProcessed) data.onProcessed({ pushed_count: result.created_issues_count });
-    } else {
-      setJiraError('Push failed');
-    }
-  };
-
-  return (
-    <div className={`bg-red-50 border-2 border-red-300 rounded-lg p-4 min-w-[340px] shadow-lg ${isLoading ? 'animate-pulse' : ''}`}>
-      <div className="font-bold text-red-900 mb-2">🔌 {data.name || 'Push to JIRA'}</div>
-      <div className="text-xs text-gray-600 mb-3">{data.label}</div>
-
-      {!state.jiraResult ? (
-        <div className="space-y-2">
-          {!showConfig ? (
-            <button
-              onClick={() => setShowConfig(true)}
-              className="text-xs text-blue-600 hover:underline mb-2"
-            >
-              Show JIRA Configuration
-            </button>
-          ) : (
-            <>
-              <input
-                type="text"
-                placeholder="JIRA URL"
-                value={jiraConfig.url}
-                onChange={(e) => setJiraConfig({ ...jiraConfig, url: e.target.value })}
-                className="w-full text-xs p-1 border rounded"
-              />
-              <input
-                type="text"
-                placeholder="Project Key"
-                value={jiraConfig.project_key}
-                onChange={(e) => setJiraConfig({ ...jiraConfig, project_key: e.target.value })}
-                className="w-full text-xs p-1 border rounded"
-              />
-              <input
-                type="text"
-                placeholder="Username"
-                value={jiraConfig.username}
-                onChange={(e) => setJiraConfig({ ...jiraConfig, username: e.target.value })}
-                className="w-full text-xs p-1 border rounded"
-              />
-              <input
-                type="password"
-                placeholder="API Token"
-                value={jiraConfig.api_token}
-                onChange={(e) => setJiraConfig({ ...jiraConfig, api_token: e.target.value })}
-                className="w-full text-xs p-1 border rounded"
-              />
-            </>
-          )}
-
-          <div className="text-xs bg-red-100 p-2 rounded">
-            Ready to push: {state.selectedTestCaseIds.size} test cases
-          </div>
-
-          <button
-            onClick={handlePush}
-            disabled={isLoading || state.selectedTestCaseIds.size === 0 || !jiraConfig.api_token}
-            className="w-full text-xs bg-red-500 text-white p-2 rounded hover:bg-red-600 disabled:bg-gray-400 transition-colors"
-          >
-            {isLoading ? 'Pushing...' : 'Push to JIRA'}
-          </button>
-        </div>
+      {!hasEvalRun ? (
+        <button
+          onClick={createEvaluationRun}
+          disabled={isProcessing || !state.dataset}
+          className="w-full text-xs bg-pink-500 text-white p-2 rounded hover:bg-pink-600 disabled:bg-gray-400 transition-colors font-semibold"
+        >
+          {isProcessing ? 'Creating evaluation run...' : '📊 Create Evaluation Run'}
+        </button>
       ) : (
-        <div className="space-y-2">
-          <div className="text-xs bg-green-100 p-2 rounded">
-            ✓ Pushed {state.jiraResult.created_issues_count} issues
+        <div className="bg-green-100 border border-green-400 rounded p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">✓</span>
+            <span className="font-semibold text-green-900">Evaluation Complete</span>
           </div>
-          <div className="max-h-32 overflow-y-auto bg-white border rounded p-2 text-xs space-y-1">
-            {state.jiraResult.issue_keys.map((key) => (
-              <div key={key} className="text-gray-700 font-semibold">
-                {key}
-              </div>
-            ))}
+          <div className="text-xs text-green-800 ml-6 space-y-1">
+            <div>Eval Run ID: {state.evaluationRun.evalRunId}</div>
+            <div>Name: {state.evaluationRun.name}</div>
+            <div>Traces: {state.evaluationRun.traceCount}</div>
+            {state.evaluationRun.score !== null && (
+              <div>Score: {state.evaluationRun.score.toFixed(2)}</div>
+            )}
           </div>
         </div>
       )}
 
-      {error && <div className="text-xs text-red-600 mt-2">⚠️ {error}</div>}
+      {state.langfuseError && (
+        <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border border-red-200">
+          ⚠️ {state.langfuseError}
+        </div>
+      )}
+
+      {responseData && <ResponseViewer data={responseData} title="Evaluation Response" />}
 
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: '#ef4444' }}
         isConnectable={isConnectable}
       />
     </div>
