@@ -8,7 +8,7 @@
 
 export interface WorkflowNode {
   id: string;
-  type: 'uploadNode' | 'processorNode' | 'validatorNode' | 'manualNode' | 'integrationNode';
+  type: 'upload' | 'extract' | 'generate' | 'judge' | 'review' | 'approve' | 'jiraPush';
   label: string;
   description: string;
   position: { x: number; y: number };
@@ -43,7 +43,7 @@ export const DEFAULT_WORKFLOW_NODES: WorkflowNode[] = [
   // 1. Upload Requirements (MANDATORY)
   {
     id: 'node-1-upload-requirements',
-    type: 'uploadNode',
+    type: 'upload',
     label: 'Upload Requirements',
     description: 'Upload requirements document (PDF, DOCX, etc.)',
     position: { x: 0, y: 0 },
@@ -59,7 +59,7 @@ export const DEFAULT_WORKFLOW_NODES: WorkflowNode[] = [
   // 2. Extract Requirements (MANDATORY)
   {
     id: 'node-2-extract',
-    type: 'processorNode',
+    type: 'extract',
     label: 'Extract Requirements',
     description: 'Parse and extract requirements from documents',
     position: { x: X_OFFSET, y: 0 },
@@ -72,30 +72,45 @@ export const DEFAULT_WORKFLOW_NODES: WorkflowNode[] = [
     },
   },
 
-  // 3. Upload Standards (OPTIONAL - can be toggled on/off)
+  // 3. Upload Standards (DISABLED FOR HACKATHON - Feature not needed in MVP)
+  // {
+  //   id: 'node-3-upload-standards',
+  //   type: 'upload',
+  //   label: 'Upload Standards',
+  //   description: 'Upload compliance standards (IEC-62304, FDA, ISO)',
+  //   position: { x: X_OFFSET * 2, y: Y_OFFSET },
+  //   data: {
+  //     name: 'Standards Upload',
+  //     label: 'Upload standards (optional)',
+  //     processorType: undefined,
+  //     optional: true,
+  //     runnable: false,
+  //   },
+  //   optional: true,
+  //   featureKey: 'includeStandards',
+  // },
+
+  // 3. Review Requirements (MANDATORY - approve extracted requirements)
   {
-    id: 'node-3-upload-standards',
-    type: 'uploadNode',
-    label: 'Upload Standards',
-    description: 'Upload compliance standards (IEC-62304, FDA, ISO)',
-    position: { x: X_OFFSET * 2, y: Y_OFFSET },
+    id: 'node-3-review',
+    type: 'review',
+    label: 'Review Requirements',
+    description: 'Manual review and approval of extracted requirements',
+    position: { x: X_OFFSET * 2, y: 0 },
     data: {
-      name: 'Standards Upload',
-      label: 'Upload standards (optional)',
-      processorType: undefined,
-      optional: true,
+      name: 'Human Review',
+      label: 'Approve extracted requirements',
+      optional: false,
       runnable: false,
     },
-    optional: true,
-    featureKey: 'includeStandards',
   },
 
   // 4. Generate Tests (MANDATORY)
   {
     id: 'node-4-generate',
-    type: 'processorNode',
+    type: 'generate',
     label: 'Generate Tests',
-    description: 'Generate test cases from requirements',
+    description: 'Generate test cases from approved requirements',
     position: { x: X_OFFSET * 3, y: 0 },
     data: {
       name: 'Test Generator',
@@ -106,33 +121,32 @@ export const DEFAULT_WORKFLOW_NODES: WorkflowNode[] = [
     },
   },
 
-  // 5. Judge LLM Evaluation (OPTIONAL - can be toggled on/off)
+  // 5. Judge LLM Evaluation (MANDATORY - default behavior)
   {
     id: 'node-5-judge',
-    type: 'validatorNode',
+    type: 'judge',
     label: 'Judge LLM Evaluation',
     description: 'AI-powered quality evaluation with 8-category rubric',
-    position: { x: X_OFFSET * 4, y: Y_OFFSET },
+    position: { x: X_OFFSET * 4, y: 0 },
     data: {
       name: 'Quality Judge',
-      label: 'Validate quality with Judge LLM (optional)',
-      optional: true,
+      label: 'Validate quality with Judge LLM',
+      optional: false,
       runnable: false,
     },
-    optional: true,
-    featureKey: 'includeJudge',
+    optional: false,
   },
 
-  // 6. Human Review (MANDATORY)
+  // 6. Approve Test Cases (MANDATORY - select test cases to export)
   {
-    id: 'node-6-review',
-    type: 'manualNode',
-    label: 'Human Review',
-    description: 'Manual review and approval of test cases',
+    id: 'node-6-approve',
+    type: 'approve',
+    label: 'Approve Test Cases',
+    description: 'Select and approve test cases for export',
     position: { x: X_OFFSET * 5, y: 0 },
     data: {
-      name: 'Human Review',
-      label: 'Manual verification and approval',
+      name: 'Approve Test Cases',
+      label: 'Select cases to push to JIRA',
       optional: false,
       runnable: false,
     },
@@ -141,7 +155,7 @@ export const DEFAULT_WORKFLOW_NODES: WorkflowNode[] = [
   // 7. Export to System (MANDATORY)
   {
     id: 'node-7-export',
-    type: 'integrationNode',
+    type: 'jiraPush',
     label: 'Export to ALM',
     description: 'Push approved test cases to JIRA, Azure DevOps, TestRail, or Polarion',
     position: { x: X_OFFSET * 6, y: 0 },
@@ -159,66 +173,45 @@ export const DEFAULT_WORKFLOW_NODES: WorkflowNode[] = [
  * Edges to optional nodes are conditionally rendered based on workflow config
  */
 export const DEFAULT_WORKFLOW_EDGES: WorkflowEdge[] = [
-  // Upload Requirements → Extract
+  // 1. Upload Requirements → Extract Requirements
   {
     id: 'edge-1-2',
     source: 'node-1-upload-requirements',
     target: 'node-2-extract',
   },
 
-  // Extract → Upload Standards (if includeStandards is true)
+  // 2. Extract Requirements → Review Requirements (approve which to use)
   {
     id: 'edge-2-3',
     source: 'node-2-extract',
-    target: 'node-3-upload-standards',
-    conditionalFeature: 'includeStandards',
+    target: 'node-3-review',
   },
 
-  // Standards → Generate (if includeStandards is true)
+  // 3. Review Requirements → Generate Test Cases
   {
     id: 'edge-3-4',
-    source: 'node-3-upload-standards',
+    source: 'node-3-review',
     target: 'node-4-generate',
-    conditionalFeature: 'includeStandards',
   },
 
-  // Extract → Generate (if includeStandards is false, skip standards)
-  {
-    id: 'edge-2-4-direct',
-    source: 'node-2-extract',
-    target: 'node-4-generate',
-    conditionalFeature: 'includeStandards', // inverted - use when false
-    hidden: true, // starts hidden, shown when includeStandards is false
-  },
-
-  // Generate → Judge (if includeJudge is true)
+  // 4. Generate Test Cases → Judge LLM Evaluation
   {
     id: 'edge-4-5',
     source: 'node-4-generate',
     target: 'node-5-judge',
-    conditionalFeature: 'includeJudge',
   },
 
-  // Judge → Review (if includeJudge is true)
+  // 5. Judge LLM Evaluation → Approve Test Cases (select which to push)
   {
     id: 'edge-5-6',
     source: 'node-5-judge',
-    target: 'node-6-review',
-    conditionalFeature: 'includeJudge',
+    target: 'node-6-approve',
   },
 
-  // Generate → Review (if includeJudge is false, skip judge)
-  {
-    id: 'edge-4-6-direct',
-    source: 'node-4-generate',
-    target: 'node-6-review',
-    hidden: true, // starts hidden, shown when includeJudge is false
-  },
-
-  // Review → Export
+  // 6. Approve Test Cases → Export to ALM (JIRA, Azure DevOps, etc.)
   {
     id: 'edge-6-7',
-    source: 'node-6-review',
+    source: 'node-6-approve',
     target: 'node-7-export',
   },
 ];

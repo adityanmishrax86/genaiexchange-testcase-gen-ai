@@ -1,0 +1,274 @@
+========================================
+BACKEND ROUTING & DATA FLOW MAP
+========================================
+
+FRONTEND WORKFLOW (7 nodes)
+├── node-1-upload-requirements
+├── node-2-extract  
+├── node-3-review
+├── node-4-generate
+├── node-5-judge ⭐ NEW (LLM-as-Judge)
+├── node-6-approve
+└── node-7-export
+
+BACKEND ROUTERS & ENDPOINTS (12 routers)
+========================================
+
+1. PIPELINE ROUTER (Orchestration)
+   ├── POST /api/pipeline/start ⚠️ USES DEPRECATED extraction.call_vertex_extraction()
+   ├── GET /api/pipeline/status/{session_id}
+   └── POST /api/pipeline/auto-approve/{session_id}
+
+2. FILES ROUTER (Upload)
+   ├── POST /api/upload
+   └── GET /api/documents
+
+3. EXTRACTION ROUTER (Extract Requirements)
+   └── POST /api/extract/{doc_id} ✅ Uses GeminiClient (NEW)
+
+4. GENERATE ROUTER (Test Case Generation)
+   ├── POST /api/generate/preview
+   ├── POST /api/generate/confirm
+   ├── POST /api/generate/regenerate/{preview_id}
+   ├── POST /api/generate/regenerate-batch
+   └── GET /api/testcase/{tc_id}
+
+5. JUDGE ROUTER (LLM-as-Judge) ⭐ NEW FEATURE
+   ├── POST /api/judge/evaluate (single)
+   ├── POST /api/judge/evaluate-batch (multiple)
+   └── GET /api/judge/scores/{test_case_id}
+
+6. HUMAN REVIEW ROUTER (Test Case Approval)
+   ├── GET /api/review/package/{test_case_id}
+   ├── POST /api/review/decide
+   ├── POST /api/review/batch-decide
+   ├── GET /api/review/pending-approval
+   └── GET /api/review/audit-trail/{test_case_id}
+
+7. REVIEW ROUTER (Requirement Approval) [Legacy]
+   └── POST /api/review/{req_id}
+
+8. RAG ROUTER (Vector Embeddings)
+   ├── POST /api/rag/embed
+   ├── POST /api/rag/search
+   └── GET /api/rag/status/{doc_id}
+
+9. EXPORT ROUTER (JIRA Integration)
+   ├── POST /api/export/jira
+   ├── GET /api/export/traceability_matrix
+   └── GET /api/export/testcases/download
+
+10. TESTCASES ROUTER (Query)
+    └── GET /api/testcases
+
+11. REQUIREMENTS ROUTER (Query & Update)
+    ├── GET /api/requirements
+    ├── GET /api/requirements/{req_id}
+    └── PUT /api/requirements/{req_id}
+
+12. (Reserved for future use)
+
+DATA MODEL FLOW
+===============
+
+Document (uploaded file)
+    ↓
+    └─→ Requirement (extracted from document)
+            ├─→ field_confidences: JSON map
+            ├─→ overall_confidence: float (0-1)
+            ├─→ status: extracted|approved|archived
+            └─→ embeddings_json: (RAG storage)
+                    ↓
+                    └─→ TestCase (generated from requirement)
+                            ├─→ gherkin: string
+                            ├─→ evidence_json: list
+                            ├─→ automated_steps_json: list
+                            ├─→ sample_data_json: dict
+                            ├─→ code_scaffold_str: string
+                            ├─→ test_type: positive|negative|boundary
+                            ├─→ status: preview|generated|stale|rejected|pushed
+                            └─→ jira_issue_key: (after export)
+
+Audit Trails
+├── GenerationEvent (LLM calls: extraction, generation, confirmation)
+│   └─→ Tracks: model_name, prompt, raw_response, produced_testcase_ids
+└── ReviewEvent (Human decisions: approval, edits, judge evaluation)
+    └─→ Tracks: reviewer, action, diffs, reviewer_confidence
+
+STATUS WORKFLOWS
+================
+
+REQUIREMENT STATUS:
+  extracted (default after /extract)
+    ↓
+  approved (after /review/{req_id} with confidence >= 0.7)
+    ↓
+  [used for test generation]
+    
+  OR needs_author (if extraction fails)
+  OR archived (when replaced by /PUT /requirements/{req_id})
+
+TEST CASE STATUS:
+  preview (after /generate/preview)
+    ↓ (must confirm)
+  generated (after /generate/confirm)
+    ↓ (human review optional)
+  [select for export]
+    ↓
+  pushed (after /export/jira)
+
+  OR stale (when requirement edited)
+  OR rejected (after /review/decide)
+
+CRITICAL REQUEST/RESPONSE EXAMPLES
+===================================
+
+1. POST /api/pipeline/start (File upload + extraction)
+   Request: multipart/form-data { file }
+   Response: {
+     "upload_session_id": "uuid",
+     "doc_id": 123,
+     "requirements_created": 5
+   }
+   NOTE: Uses deprecated call_vertex_extraction()
+
+2. POST /api/extract/{doc_id} (Requirement extraction)
+   Request: { doc_id: 123 }
+   Response: {
+     "created_requirements": [
+       { "id": 1, "requirement_id": "REQ-AL-045", "raw_text": "..." }
+     ]
+   }
+   NOTE: Uses new GeminiClient, no schema validation
+
+3. POST /api/generate/preview (Test case generation)
+   Request: { "doc_id": 123, "test_types": ["positive", "negative"] }
+   Response: {
+     "preview_count": 6,
+     "previews": [
+       {
+         "id": 456,
+         "test_case_id": "TC-REQ-AL-045-1730556789",
+         "gherkin": "Given...",
+         "status": "preview",
+         ...
+       }
+     ]
+   }
+   NOTE: Only processes requirements with status="approved"
+
+4. POST /api/judge/evaluate-batch (Judge evaluation) ⭐
+   Request: { "test_case_ids": [456, 457, 458] }
+   Response: {
+     "evaluations": [
+       {
+         "test_case_id": 456,
+         "total_rating": 3,
+         "correctness_of_trigger": 0.85,
+         "timing_and_latency": 0.75,
+         "actions_and_priority": 0.9,
+         "logging_and_traceability": 0.8,
+         "standards_citations": 0.6,
+         "boundary_readiness": 0.85,
+         "consistency_and_no_hallucination": 0.95,
+         "confidence_and_warnings": 0.7
+       }
+     ],
+     "total_evaluated": 3,
+     "success": true
+   }
+   NOTE: 8-dimensional rubric scoring!
+
+5. POST /api/review/decide (Human QA decision)
+   Request: {
+     "test_case_id": 456,
+     "decision": "approve|reject|regenerate",
+     "notes": "...",
+     "edits": { "gherkin": "..." }
+   }
+   Response: {
+     "test_case_id": 456,
+     "decision": "approve",
+     "status": "generated"
+   }
+
+6. POST /api/export/jira (Push to JIRA)
+   Request: /api/export/jira?test_case_ids=456&test_case_ids=457
+   Response: {
+     "message": "Successfully pushed to JIRA",
+     "created_count": 2,
+     "issue_keys": ["TCG-123", "TCG-124"]
+   }
+   NOTE: Requires JIRA_BASE_URL_PRAJNA, JIRA_API_USER_PRAJNA, etc.
+
+ENVIRONMENT VARIABLES
+=====================
+
+Required:
+- GEMINI_API_KEY (LLM access)
+- DATABASE_URL (sqlite:///data.db or postgresql://...)
+
+Optional but recommended:
+- GENAI_MODEL (default: gemini-2.5-flash-lite)
+- JUDGE_MODEL (default: gemini-2.5-pro)
+- UPLOAD_DIR (default: ./uploads)
+- JIRA_BASE_URL_PRAJNA, JIRA_API_USER_PRAJNA, JIRA_API_TOKEN_PRAJNA
+- JIRA_PROJECT_KEY (default: TCG)
+- JIRA_ISSUE_TYPE (default: Test)
+
+VITAL ISSUES TO ADDRESS
+=======================
+
+1. [HIGH] Deprecated Extraction in Pipeline Router
+   - /api/pipeline/start uses call_vertex_extraction() (OLD Vertex SDK)
+   - /api/extract/{doc_id} uses GeminiClient (NEW google-genai)
+   - → Should unify to GeminiClient
+
+2. [MEDIUM] Missing Requirement Approval Flow
+   - /api/generate/preview requires status="approved"
+   - Only way to approve is /api/review/{req_id} (endpoint exists but legacy)
+   - No bulk-approve endpoint
+   - → Frontend workflow Review node should call /api/review/{req_id}
+
+3. [MEDIUM] Test Case Status Handling
+   - "stale" status set but no auto-reprocessing
+   - "rejected" status set but no downstream handling
+   - → Consider automated regeneration flow
+
+4. [LOW] Confidence Scoring Defaults
+   - extraction_router.py defaults to 0.7
+   - pipeline_router.py defaults to 0.5
+   - → Should be consistent
+
+5. [LOW] Missing Schema Validation
+   - Extraction doesn't use response_schema=ExtractionResponse
+   - Should validate Gemini responses
+   - → Add schema parameter to generate_structured_response()
+
+WORKFLOW INTEGRATION POINTS
+============================
+
+Frontend Node → Backend API calls:
+
+Upload Requirements
+  └─→ POST /api/upload → returns doc_id
+
+Extract
+  └─→ POST /api/extract/{doc_id} → returns created_requirements
+
+Review Requirements ⚠️ MISSING
+  └─→ POST /api/review/{req_id} (to approve)
+
+Generate
+  ├─→ POST /api/generate/preview → returns previews
+  └─→ POST /api/generate/confirm → confirms selection
+
+Judge ⭐ NEW
+  └─→ POST /api/judge/evaluate-batch → returns evaluations with 8 rubric scores
+
+Approve Test Cases (Manual)
+  └─→ POST /api/review/decide (for each test case)
+
+Export
+  └─→ POST /api/export/jira → returns issue_keys
+

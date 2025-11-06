@@ -45,7 +45,8 @@ export interface GeneratedTestCase {
 }
 
 export interface GenerateResult {
-  test_cases: GeneratedTestCase[];
+  preview_count: number;
+  previews: GeneratedTestCase[];
 }
 
 export interface JudgeVerdict {
@@ -64,7 +65,22 @@ export interface JudgeVerdict {
 }
 
 export interface JudgeResult {
-  verdicts: JudgeVerdict[];
+  evaluations: Array<{
+    test_case_id: number;
+    feedback: string;
+    total_rating: number;
+    correctness_of_trigger?: number;
+    timing_and_latency?: number;
+    actions_and_priority?: number;
+    logging_and_traceability?: number;
+    standards_citations?: number;
+    boundary_readiness?: number;
+    consistency_and_no_hallucination?: number;
+    confidence_and_warnings?: number;
+  }>;
+  total_evaluated: number;
+  errors: string[];
+  success: boolean;
 }
 
 export interface JiraConfig {
@@ -76,8 +92,10 @@ export interface JiraConfig {
 
 export interface JiraExportResult {
   message: string;
-  created_issues_count: number;
+  created_count: number;
   issue_keys: string[];
+  failed_count?: number;
+  failed_ids?: Array<{ id: number; reason: string }>;
 }
 
 // ============ API HELPER HOOK ============
@@ -194,7 +212,7 @@ export function useWorkflowApi() {
         }
 
         const data: GenerateResult = await response.json();
-        return data.test_cases || [];
+        return data.previews || [];
       } catch (err: any) {
         const errorMsg = err.message || 'Generation failed';
         setError(errorMsg);
@@ -225,7 +243,7 @@ export function useWorkflowApi() {
       }
 
       const data: JudgeResult = await response.json();
-      return data.verdicts || [];
+      return (data.evaluations || []) as JudgeVerdict[];
     } catch (err: any) {
       const errorMsg = err.message || 'Judge evaluation failed';
       setError(errorMsg);
