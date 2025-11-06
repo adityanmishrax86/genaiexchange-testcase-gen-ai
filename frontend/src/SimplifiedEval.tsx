@@ -134,7 +134,7 @@ export default function SimplifiedEval() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold">Simplified Evaluation Pipeline</h1>
-            <p className="text-sm text-purple-100">One-click QnA dataset evaluation</p>
+            <p className="text-sm text-purple-100">A Tech4Dev Product</p>
           </div>
           <button
             onClick={handleBackToWorkflow}
