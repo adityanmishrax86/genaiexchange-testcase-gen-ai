@@ -2,189 +2,246 @@
  * WorkflowContext.tsx
  *
  * Manages shared workflow state across all nodes.
- * Each node can read and update workflow data.
+ * Handles 5-stage LLM Evaluation Pipeline:
+ * 1. Dataset Handler: CSV → Langfuse Dataset (5x duplication) → JSONL
+ * 2. LLM Runner: JSONL → OpenAI Batch → Poll → Results
+ * 3. Module Executor: Embeddings JSONL → OpenAI Embeddings → Cosine similarity
+ * 4. Results Aggregator: Statistics (avg, min, max, std) → eval_run.score
+ * 5. Langfuse Logger: EvaluationRun → Traces → Score updates
  */
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import {
-  ExtractedRequirement,
-  GeneratedTestCase,
-  JudgeVerdict,
-} from '../hooks/useWorkflowApi';
+
+// ============ TYPE DEFINITIONS ============
+
+/** Dataset from CSV upload and Langfuse creation */
+export interface DatasetInfo {
+  datasetId: string;
+  name: string;
+  rowCount: number;
+  duplicatedRowCount: number;
+}
+
+/** OpenAI Batch information */
+export interface BatchInfo {
+  batchId: string;
+  status: 'queued' | 'in_progress' | 'completed' | 'failed';
+  inputFileId: string;
+  outputFileId: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+/** Embedding results with semantic similarity scores */
+export interface EmbeddingResult {
+  traceId: string;
+  embeddings: number[];
+  cosineSimilarity?: number;
+}
+
+/** Evaluation run tracking */
+export interface EvaluationRunInfo {
+  evalRunId: string;
+  name: string;
+  createdAt: string;
+  traceCount: number;
+  score: number | null;
+}
+
+/** Aggregated evaluation statistics */
+export interface AggregatedStats {
+  averageScore: number;
+  minScore: number;
+  maxScore: number;
+  stdDeviation: number;
+  passCount: number;
+  failCount: number;
+}
 
 export interface WorkflowState {
-  // Upload step
-  docId: number | null;
-  filename: string | null;
+  // Stage 1: Dataset Handler
+  dataset: DatasetInfo | null;
+  csvError: string | null;
 
-  // Extract step
-  requirements: ExtractedRequirement[];
-  extractionError: string | null;
+  // Stage 2: LLM Runner
+  batch: BatchInfo | null;
+  batchPollingStatus: 'idle' | 'polling' | 'completed' | 'failed';
+  batchError: string | null;
 
-  // Review step
-  approvedRequirementIds: Set<number>;
+  // Stage 3: Module Executor (Optional)
+  embeddings: EmbeddingResult[];
+  embeddingsError: string | null;
 
-  // Generate step
-  testCases: GeneratedTestCase[];
-  generationError: string | null;
+  // Stage 4: Results Aggregator
+  aggregatedStats: AggregatedStats | null;
+  aggregationError: string | null;
 
-  // Judge step
-  judgeVerdicts: JudgeVerdict[];
-  judgeError: string | null;
+  // Stage 5: Langfuse Logger
+  evaluationRun: EvaluationRunInfo | null;
+  langfuseError: string | null;
 
-  // Approve step
-  selectedTestCaseIds: Set<number>;
-
-  // JIRA step
-  jiraResult: {
-    created_issues_count: number;
-    issue_keys: string[];
-  } | null;
-  jiraError: string | null;
+  // General tracking
+  currentStage: 'idle' | 'datasetHandler' | 'llmRunner' | 'moduleExecutor' | 'resultsAggregator' | 'langfuseLogger';
 }
 
 export interface WorkflowContextType {
   state: WorkflowState;
-  setDocId: (docId: number, filename: string) => void;
-  setRequirements: (requirements: ExtractedRequirement[]) => void;
-  setExtractionError: (error: string | null) => void;
-  approveRequirement: (reqId: number) => void;
-  rejectRequirement: (reqId: number) => void;
-  setTestCases: (testCases: GeneratedTestCase[]) => void;
-  setGenerationError: (error: string | null) => void;
-  setJudgeVerdicts: (verdicts: JudgeVerdict[]) => void;
-  setJudgeError: (error: string | null) => void;
-  selectTestCase: (testCaseId: number) => void;
-  deselectTestCase: (testCaseId: number) => void;
-  setJiraResult: (result: { created_issues_count: number; issue_keys: string[] } | null) => void;
-  setJiraError: (error: string | null) => void;
+
+  // Stage 1: Dataset Handler
+  setDataset: (dataset: DatasetInfo) => void;
+  setCsvError: (error: string | null) => void;
+
+  // Stage 2: LLM Runner
+  setBatch: (batch: BatchInfo) => void;
+  setBatchPollingStatus: (status: 'idle' | 'polling' | 'completed' | 'failed') => void;
+  setBatchError: (error: string | null) => void;
+
+  // Stage 3: Module Executor
+  setEmbeddings: (embeddings: EmbeddingResult[]) => void;
+  setEmbeddingsError: (error: string | null) => void;
+
+  // Stage 4: Results Aggregator
+  setAggregatedStats: (stats: AggregatedStats) => void;
+  setAggregationError: (error: string | null) => void;
+
+  // Stage 5: Langfuse Logger
+  setEvaluationRun: (run: EvaluationRunInfo) => void;
+  setLangfuseError: (error: string | null) => void;
+
+  // General
+  setCurrentStage: (stage: WorkflowState['currentStage']) => void;
   reset: () => void;
 }
 
 const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
 
 const initialState: WorkflowState = {
-  docId: null,
-  filename: null,
-  requirements: [],
-  extractionError: null,
-  approvedRequirementIds: new Set(),
-  testCases: [],
-  generationError: null,
-  judgeVerdicts: [],
-  judgeError: null,
-  selectedTestCaseIds: new Set(),
-  jiraResult: null,
-  jiraError: null,
+  // Stage 1: Dataset Handler
+  dataset: null,
+  csvError: null,
+
+  // Stage 2: LLM Runner
+  batch: null,
+  batchPollingStatus: 'idle',
+  batchError: null,
+
+  // Stage 3: Module Executor
+  embeddings: [],
+  embeddingsError: null,
+
+  // Stage 4: Results Aggregator
+  aggregatedStats: null,
+  aggregationError: null,
+
+  // Stage 5: Langfuse Logger
+  evaluationRun: null,
+  langfuseError: null,
+
+  // General
+  currentStage: 'idle',
 };
 
 export function WorkflowProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<WorkflowState>(initialState);
 
-  const setDocId = useCallback((docId: number, filename: string) => {
+  // ============ Stage 1: Dataset Handler ============
+
+  const setDataset = useCallback((dataset: DatasetInfo) => {
     setState((prev) => ({
       ...prev,
-      docId,
-      filename,
+      dataset,
+      csvError: null,
     }));
   }, []);
 
-  const setRequirements = useCallback((requirements: ExtractedRequirement[]) => {
+  const setCsvError = useCallback((error: string | null) => {
     setState((prev) => ({
       ...prev,
-      requirements,
-      extractionError: null,
+      csvError: error,
     }));
   }, []);
 
-  const setExtractionError = useCallback((error: string | null) => {
+  // ============ Stage 2: LLM Runner ============
+
+  const setBatch = useCallback((batch: BatchInfo) => {
     setState((prev) => ({
       ...prev,
-      extractionError: error,
+      batch,
+      batchError: null,
     }));
   }, []);
 
-  const approveRequirement = useCallback((reqId: number) => {
+  const setBatchPollingStatus = useCallback((status: 'idle' | 'polling' | 'completed' | 'failed') => {
     setState((prev) => ({
       ...prev,
-      approvedRequirementIds: new Set([...prev.approvedRequirementIds, reqId]),
+      batchPollingStatus: status,
     }));
   }, []);
 
-  const rejectRequirement = useCallback((reqId: number) => {
-    setState((prev) => {
-      const newSet = new Set(prev.approvedRequirementIds);
-      newSet.delete(reqId);
-      return {
-        ...prev,
-        approvedRequirementIds: newSet,
-      };
-    });
-  }, []);
-
-  const setTestCases = useCallback((testCases: GeneratedTestCase[]) => {
+  const setBatchError = useCallback((error: string | null) => {
     setState((prev) => ({
       ...prev,
-      testCases,
-      generationError: null,
+      batchError: error,
     }));
   }, []);
 
-  const setGenerationError = useCallback((error: string | null) => {
+  // ============ Stage 3: Module Executor ============
+
+  const setEmbeddings = useCallback((embeddings: EmbeddingResult[]) => {
     setState((prev) => ({
       ...prev,
-      generationError: error,
+      embeddings,
+      embeddingsError: null,
     }));
   }, []);
 
-  const setJudgeVerdicts = useCallback((verdicts: JudgeVerdict[]) => {
+  const setEmbeddingsError = useCallback((error: string | null) => {
     setState((prev) => ({
       ...prev,
-      judgeVerdicts: verdicts,
-      judgeError: null,
+      embeddingsError: error,
     }));
   }, []);
 
-  const setJudgeError = useCallback((error: string | null) => {
+  // ============ Stage 4: Results Aggregator ============
+
+  const setAggregatedStats = useCallback((stats: AggregatedStats) => {
     setState((prev) => ({
       ...prev,
-      judgeError: error,
+      aggregatedStats: stats,
+      aggregationError: null,
     }));
   }, []);
 
-  const selectTestCase = useCallback((testCaseId: number) => {
+  const setAggregationError = useCallback((error: string | null) => {
     setState((prev) => ({
       ...prev,
-      selectedTestCaseIds: new Set([...prev.selectedTestCaseIds, testCaseId]),
+      aggregationError: error,
     }));
   }, []);
 
-  const deselectTestCase = useCallback((testCaseId: number) => {
-    setState((prev) => {
-      const newSet = new Set(prev.selectedTestCaseIds);
-      newSet.delete(testCaseId);
-      return {
-        ...prev,
-        selectedTestCaseIds: newSet,
-      };
-    });
-  }, []);
+  // ============ Stage 5: Langfuse Logger ============
 
-  const setJiraResult = useCallback(
-    (result: { created_issues_count: number; issue_keys: string[] } | null) => {
-      setState((prev) => ({
-        ...prev,
-        jiraResult: result,
-        jiraError: null,
-      }));
-    },
-    []
-  );
-
-  const setJiraError = useCallback((error: string | null) => {
+  const setEvaluationRun = useCallback((run: EvaluationRunInfo) => {
     setState((prev) => ({
       ...prev,
-      jiraError: error,
+      evaluationRun: run,
+      langfuseError: null,
+    }));
+  }, []);
+
+  const setLangfuseError = useCallback((error: string | null) => {
+    setState((prev) => ({
+      ...prev,
+      langfuseError: error,
+    }));
+  }, []);
+
+  // ============ General ============
+
+  const setCurrentStage = useCallback((stage: WorkflowState['currentStage']) => {
+    setState((prev) => ({
+      ...prev,
+      currentStage: stage,
     }));
   }, []);
 
@@ -194,19 +251,18 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
 
   const value: WorkflowContextType = {
     state,
-    setDocId,
-    setRequirements,
-    setExtractionError,
-    approveRequirement,
-    rejectRequirement,
-    setTestCases,
-    setGenerationError,
-    setJudgeVerdicts,
-    setJudgeError,
-    selectTestCase,
-    deselectTestCase,
-    setJiraResult,
-    setJiraError,
+    setDataset,
+    setCsvError,
+    setBatch,
+    setBatchPollingStatus,
+    setBatchError,
+    setEmbeddings,
+    setEmbeddingsError,
+    setAggregatedStats,
+    setAggregationError,
+    setEvaluationRun,
+    setLangfuseError,
+    setCurrentStage,
     reset,
   };
 
